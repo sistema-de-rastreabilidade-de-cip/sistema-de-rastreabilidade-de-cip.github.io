@@ -54,6 +54,7 @@ const OP_CORES_TIPO = {
   completo: "#3c7a5c",
   tanque_levedura: "#8a5a12",
   linha_recuperacao_levedura: "#2a4b57",
+  osam: "#5b5796",
 };
 
 const OP_ICONE = {
@@ -64,6 +65,7 @@ const OP_ICONE = {
   doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3h16v18H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   gota: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8 6 5 10 5 14a7 7 0 0014 0c0-4-3-8-7-12z"/></svg>',
   linhas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>',
+  tanque: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10v4a5 5 0 01-1 3v9a2 2 0 01-2 2h-4a2 2 0 01-2-2v-9a5 5 0 01-1-3z"/><path d="M8 13h8"/></svg>',
 };
 
 // Janela de consulta para KPIs e para os 2 gráficos: cobre pelo menos
@@ -203,9 +205,10 @@ function opRenderizarListaRegistros(containerId, registros, qtdInicial) {
       <div class="item-registro${qtdInicial && i >= qtdInicial ? " oculto-paginacao" : ""}">
         <span class="tipo-marca" style="background:${OP_CORES_TIPO[r.tipo_cip] || "#888"}"></span>
         <div class="dados">
-          <div class="linha-principal">${opEscaparHtml(TIPO_CIP_LABELS[r.tipo_cip] || r.tipo_cip)} — ${opEscaparHtml(r.equipamento)}</div>
+          <div class="linha-principal">${opEscaparHtml(TIPO_CIP_LABELS[r.tipo_cip] || r.tipo_cip)} — ${cipRotuloEquipHtml(r)}</div>
           <div class="linha-secundaria">Operador: ${opEscaparHtml(r.nome_operador)}</div>
         </div>
+        ${r.situacao_avaliacao ? cipSelos(r) : ""}
         <div class="hora">${opFmtData(r.data_cip)} ${r.hora_inicial ? r.hora_inicial.slice(0, 5) : ""}</div>
         <a class="ver" href="historico.html?registroId=${encodeURIComponent(r.id)}">Ver detalhes</a>
       </div>
@@ -227,8 +230,8 @@ function opRenderizarListaRegistros(containerId, registros, qtdInicial) {
 
 async function opCarregarRecentes() {
   const { data, error } = await supabaseClient
-    .from("cip_registros")
-    .select("id, tipo_cip, equipamento, data_cip, hora_inicial, nome_operador, criado_em")
+    .from("vw_cip_registros")
+    .select("id, tipo_cip, equipamento, bbt, data_cip, hora_inicial, nome_operador, criado_em, situacao_avaliacao, revisao_pendente")
     .order("criado_em", { ascending: false })
     .limit(15);
 
@@ -245,7 +248,7 @@ async function opCarregarRecentes() {
 async function opCarregarUltimosPorEquipamento() {
   const { data, error } = await supabaseClient
     .from("cip_registros")
-    .select("id, tipo_cip, equipamento, data_cip, hora_inicial, criado_em")
+    .select("id, tipo_cip, equipamento, bbt, data_cip, hora_inicial, criado_em")
     .order("criado_em", { ascending: false })
     .limit(300);
 
@@ -270,7 +273,7 @@ async function opCarregarUltimosPorEquipamento() {
       <div class="item-equip">
         <span class="marca-tipo" style="background:${OP_CORES_TIPO[r.tipo_cip] || "#888"}"></span>
         <div class="info">
-          <div class="nome">${opEscaparHtml(r.equipamento)}</div>
+          <div class="nome">${cipRotuloEquipHtml(r)}</div>
           <div class="tipo">${opEscaparHtml(TIPO_CIP_LABELS[r.tipo_cip] || r.tipo_cip)}</div>
         </div>
         <div class="quando">
@@ -287,10 +290,10 @@ function opMontarCartoesFormularios() {
   const container = document.getElementById("op-cartoes-formularios");
   container.innerHTML = Object.entries(FORM_CONFIG)
     .map(([tipo, cfg]) => {
-      const icone = tipo === "tanque_levedura" ? OP_ICONE.gota : tipo === "linha_recuperacao_levedura" ? OP_ICONE.linhas : OP_ICONE.doc;
+      const icone = tipo === "tanque_levedura" ? OP_ICONE.gota : tipo === "linha_recuperacao_levedura" ? OP_ICONE.linhas : tipo === "osam" ? OP_ICONE.tanque : OP_ICONE.doc;
       return `
         <a class="cartao-formulario" href="registro.html?tipo=${encodeURIComponent(tipo)}">
-          <div class="icone-forms">${icone}</div>
+          <div class="icone-forms"${tipo === "osam" ? ' style="background:#5b5796"' : ""}>${icone}</div>
           <h3>${opEscaparHtml(TIPO_CIP_LABELS[tipo])}</h3>
           <p>${opEscaparHtml(cfg.documentoOrigem)}</p>
           <div class="acao">Iniciar registro &rarr;</div>

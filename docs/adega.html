@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adega — Rastreabilidade de CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="marca-logo" src="assets/logo-heineken-transparente.png" alt="Heineken" />
+      </div>
+      <nav class="navegacao-topo">
+        <a href="painel.html" class="link-nav">Painel</a>
+        <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav ativo">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+      </nav>
+      <div class="usuario-topo">
+        <span id="info-usuario"></span>
+        <button type="button" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <section>
+      <div class="secao-titulo"><h2>Adega — procedimentos periódicos de CIP</h2></div>
+      <p class="texto-suave" style="margin:-4px 0 0;" id="adega-descricao">A próxima data é calculada a partir do último registro válido de cada procedimento; abrir esta tela não conta como execução.</p>
+    </section>
+    <div id="mensagem"></div>
+    <section>
+      <div class="grid-adegas" id="grid-adegas"><div class="cartao">Carregando...</div></div>
+      <div class="legenda-status" id="legenda-status"></div>
+      <p class="sem-dado" style="margin-top:6px;" id="nota-status"></p>
+    </section>
+    <section id="secao-config-adega" class="oculto">
+      <h2 class="secao-titulo">Configuração da Adega</h2>
+      <div class="barra-filtros config-adega">
+        <div class="campo-filtro"><label for="cfg-dias-aviso">Antecedência para "próximo do vencimento" (dias)</label><input type="number" id="cfg-dias-aviso" min="1" max="120" /></div>
+        <div class="botoes" style="margin-top:0;"><button type="button" class="secundario" id="btn-salvar-dias-aviso">Salvar</button></div>
+        <span class="sem-dado" style="flex:1;min-width:220px;">A data-base de cada procedimento só pode ser configurada quando ainda não existe registro daquele CIP na adega.</span>
+      </div>
+      <div id="erro-config-adega"></div>
+    </section>
+    <section>
+      <h2 class="secao-titulo">Histórico da Adega</h2>
+      <div class="caixa-registros"><div class="lista-registros" id="lista-historico-adega"></div></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/adega.js"></script>
+</body>
+</html>

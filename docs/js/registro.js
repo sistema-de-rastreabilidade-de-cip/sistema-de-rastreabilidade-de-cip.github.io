@@ -5,6 +5,8 @@
 const params = new URLSearchParams(window.location.search);
 const TIPO = params.get("tipo");
 const ID_REGISTRO = params.get("id"); // presente apenas em modo edição
+// v8: formulário aberto pela aba Adega (Adega A ou Adega B como equipamento)
+const ADEGA_PARAM = CIP_NOMES_ADEGAS.includes(params.get("adega")) ? params.get("adega") : null;
 
 let CONFIG = null;
 let REGISTRO_ATUAL = null; // carregado do banco, quando em modo edição
@@ -33,8 +35,33 @@ function criarInputTopo(idCampo, label, tipoInput, valor, extraAttrs = "") {
   `;
 }
 
-function criarSelectEquipamento(idCampo, label, tipoSeletor, valorAtual) {
-  const opcoes = listaEquipamentosParaCampo(tipoSeletor)
+function criarSelectBbt(valorAtual) {
+  const opcoes = CONFIG.bbt.opcoes
+    .map((b) => `<option value="${escaparHtml(b)}" ${b === valorAtual ? "selected" : ""}>${escaparHtml(b)}</option>`)
+    .join("");
+  return `
+    <div class="campo">
+      <label for="equipamento">${escaparHtml(CONFIG.bbt.label)} <span class="marca-obrigatorio" title="Campo obrigatório">*</span></label>
+      <select id="equipamento">
+        <option value="">— selecione —</option>
+        ${opcoes}
+      </select>
+    </div>
+  `;
+}
+
+// Lista do seletor principal: as Adegas quando o formulário veio da aba
+// Adega (ou quando o registro editado é de uma Adega); senão, a lista
+// oficial do formulário.
+function listaParaSeletorPrincipal(tipoSeletor, valorAtual) {
+  if (ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorAtual)) {
+    return OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega");
+  }
+  return listaEquipamentosParaCampo(tipoSeletor);
+}
+
+function criarSelectEquipamento(idCampo, label, tipoSeletor, valorAtual, lista) {
+  const opcoes = (lista || listaEquipamentosParaCampo(tipoSeletor))
     .filter(Boolean)
     .map((item) => {
       const nome = nomeExibicaoEquipamento(item);
@@ -57,14 +84,20 @@ function renderizarCamposTopo(valoresIniciais = {}) {
   const container = document.getElementById("campos-topo");
   let html = "";
 
-  html += criarInputTopo("data_cip", "Data", "date", valoresIniciais.data_cip, "required");
+  const max = cipDataMaxima(TIPO);
+  html += criarInputTopo("data_cip", "Data", "date", valoresIniciais.data_cip, `required${max ? ` max="${max}"` : ""}`);
 
-  if (CONFIG.equipamento) {
+  if (CONFIG.bbt) {
+    html += criarSelectBbt(valoresIniciais.bbt || valoresIniciais.equipamento);
+  } else if (CONFIG.equipamento) {
+    const valorEquip = valoresIniciais.equipamento || ADEGA_PARAM || "";
+    const ehAdega = ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorEquip);
     html += criarSelectEquipamento(
       "equipamento",
-      CONFIG.equipamento.label,
+      ehAdega ? "Adega" : CONFIG.equipamento.label,
       CONFIG.equipamento.tipoSeletor,
-      valoresIniciais.equipamento
+      valorEquip,
+      listaParaSeletorPrincipal(CONFIG.equipamento.tipoSeletor, valorEquip)
     );
   } else if (CONFIG.equipamentoFixo) {
     html += `
@@ -78,7 +111,7 @@ function renderizarCamposTopo(valoresIniciais = {}) {
   html += criarInputTopo("hora_inicial", "Hora Inicial", "time", valoresIniciais.hora_inicial, "required");
 
   if (CONFIG.temHoraFinal) {
-    html += criarInputTopo("hora_final", "Hora Final", "time", valoresIniciais.hora_final);
+    html += criarInputTopo("hora_final", "Hora Final", "time", valoresIniciais.hora_final, "required");
   }
 
   html += criarInputTopo("nome_operador", "Operador", "text", valoresIniciais.nome_operador, "required");
@@ -125,10 +158,11 @@ function lerValoresDoFormulario() {
     hora_inicial: document.getElementById("hora_inicial").value || null,
     hora_final: CONFIG.temHoraFinal ? (document.getElementById("hora_final").value || null) : null,
     nome_operador: document.getElementById("nome_operador").value.trim(),
-    equipamento: CONFIG.equipamento
+    equipamento: CONFIG.equipamento || CONFIG.bbt
       ? document.getElementById("equipamento").value
       : CONFIG.equipamentoFixo,
   };
+  topo.bbt = CONFIG.bbt ? topo.equipamento : null;
 
   const dados = {};
   CONFIG.campos.forEach((campo) => {
@@ -147,8 +181,12 @@ function preencherObservacoes(texto) {
 
 function validarCamposObrigatorios(valores) {
   if (!valores.data_cip) return "Informe a Data.";
-  if (!valores.hora_inicial) return "Informe a Hora Inicial.";
+  const erroData = cipValidarDataCip(TIPO, valores.data_cip);
+  if (erroData) return erroData;
+  if (CONFIG.bbt && !valores.equipamento) return "Selecione o BBT.";
   if (CONFIG.equipamento && !valores.equipamento) return `Selecione o campo "${CONFIG.equipamento.label}".`;
+  if (!valores.hora_inicial) return "Informe a Hora Inicial.";
+  if (CONFIG.temHoraFinal && !valores.hora_final) return "Informe a Hora Final.";
   if (!valores.nome_operador) return "Informe o nome do Operador.";
   return null;
 }
@@ -169,7 +207,7 @@ async function carregarRegistroParaEdicao() {
 
 function montarSnapshot(valores) {
   // snapshot completo e comparável do registro (para o histórico de edições)
-  return {
+  const snap = {
     tipo_cip: TIPO,
     equipamento: valores.equipamento,
     data_cip: valores.data_cip,
@@ -179,6 +217,8 @@ function montarSnapshot(valores) {
     observacoes_operador: valores.observacoes_operador,
     dados: valores.dados,
   };
+  if (TIPO === "osam") snap.bbt = valores.bbt;
+  return snap;
 }
 
 async function init() {
@@ -189,6 +229,9 @@ async function init() {
 
   document.getElementById("info-usuario").textContent =
     `${perfil.nome} (${perfil.role === "administrador" ? "Administrador" : "Operador"})`;
+
+  await cipCarregarConfiguracao();
+  await cipInicializarPagina(perfil);
 
   if (perfil.role !== "operador") {
     document.body.innerHTML = `
@@ -210,6 +253,14 @@ async function init() {
   CONFIG = FORM_CONFIG[TIPO];
   document.getElementById("titulo-formulario").textContent = CONFIG.titulo;
   document.getElementById("doc-origem").textContent = `Baseado em: ${CONFIG.documentoOrigem}`;
+  if (ADEGA_PARAM && !ID_REGISTRO) {
+    const proc = CIP_ADEGA_ATUAL && CIP_ADEGA_ATUAL.procedimentos.find((p) => p.adega === ADEGA_PARAM && p.tipo_cip === TIPO);
+    document.getElementById("aviso-adega").innerHTML =
+      `<div class="aviso-formulario">Procedimento periódico da ${escaparHtml(ADEGA_PARAM)}${proc ? ` (a cada ${proc.meses} meses)` : ""}: ao salvar, a próxima data prevista é recalculada a partir deste registro.</div>`;
+    document.querySelectorAll('a[href="painel.html"].link-voltar, #link-cancelar').forEach((a) => { a.href = "adega.html"; });
+    const voltar = document.querySelector(".link-voltar");
+    if (voltar) voltar.innerHTML = "&larr; Voltar à Adega";
+  }
 
   if (ID_REGISTRO) {
     // Modo edição
@@ -287,6 +338,7 @@ async function onSubmit(e) {
       nome_operador: REGISTRO_ATUAL.nome_operador,
       observacoes_operador: REGISTRO_ATUAL.observacoes_operador,
       dados: REGISTRO_ATUAL.dados,
+      bbt: REGISTRO_ATUAL.bbt,
     });
     const snapshotNovo = montarSnapshot(valores);
 
@@ -312,6 +364,7 @@ async function onSubmit(e) {
       p_observacoes_operador: valores.observacoes_operador,
       p_justificativa: justificativaTexto.trim(),
       p_alterado_por_nome: nomeQuemEdita,
+      ...(TIPO === "osam" ? { p_bbt: valores.bbt } : {}),
     });
 
     if (errRpc) {
@@ -321,7 +374,7 @@ async function onSubmit(e) {
     }
 
     mostrarMensagem("sucesso", "Alteração salva com sucesso (registro e histórico atualizados juntos).");
-    setTimeout(() => (window.location.href = "historico.html"), 900);
+    setTimeout(() => (window.location.href = `historico.html?registroId=${encodeURIComponent(ID_REGISTRO)}`), 900);
   } else {
     // ----- Criação de novo registro -----
     // Propositalmente NÃO enviamos criado_por, atualizado_por, criado_em
@@ -332,6 +385,7 @@ async function onSubmit(e) {
     const { error } = await supabaseClient.from("cip_registros").insert({
       tipo_cip: TIPO,
       equipamento: valores.equipamento,
+      ...(TIPO === "osam" ? { bbt: valores.bbt } : {}),
       data_cip: valores.data_cip,
       hora_inicial: valores.hora_inicial,
       hora_final: valores.hora_final,
@@ -347,7 +401,8 @@ async function onSubmit(e) {
     }
 
     mostrarMensagem("sucesso", "Registro de CIP salvo com sucesso.");
-    setTimeout(() => (window.location.href = "painel.html"), 900);
+    const destino = ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valores.equipamento) ? "adega.html" : "painel.html";
+    setTimeout(() => (window.location.href = destino), 900);
   }
 }
 

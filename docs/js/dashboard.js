@@ -37,8 +37,8 @@ const DASH_LIMITE_REGISTROS = 2000;
 
 async function dashBuscarRegistros(filtros) {
   let query = supabaseClient
-    .from("cip_registros")
-    .select("id, tipo_cip, equipamento, data_cip, hora_inicial, hora_final, nome_operador, criado_em")
+    .from("vw_cip_registros")
+    .select("id, tipo_cip, equipamento, bbt, data_cip, hora_inicial, hora_final, nome_operador, criado_em, situacao_avaliacao, revisao_pendente, revisao_desde")
     .order("data_cip", { ascending: false })
     .limit(DASH_LIMITE_REGISTROS);
 
@@ -227,7 +227,7 @@ const DASH_CORES = {
   grade: "#d7ded3",
   texto: "#4b5750",
 };
-const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c"];
+const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c", "#5b5796"];
 
 function dashOpcoesBase() {
   return {
@@ -534,6 +534,9 @@ async function dashCarregar() {
     return;
   }
 
+  dashRenderizarOperadores(dashRegistrosAtuais, dashFiltrosAtuais);
+  dashAtualizarAvaliacao(dashRegistrosAtuais);
+
   const kpis = dashCalcularKPIs(dashRegistrosAtuais);
   dashRenderizarKPIs(kpis, dashFiltrosAtuais);
 
@@ -551,6 +554,19 @@ function iniciarDashboard() {
     opt.value = tipo;
     opt.textContent = label;
     selectTipo.appendChild(opt);
+  });
+
+  // Filtros vindos da URL (ex.: "Voltar ao gráfico" na tela de um operador).
+  const paramsUrl = new URLSearchParams(window.location.search);
+  [["tipo", "dash-filtro-tipo"], ["equipamento", "dash-filtro-equipamento"], ["dataInicio", "dash-filtro-data-inicio"], ["dataFim", "dash-filtro-data-fim"]].forEach(([p, id]) => {
+    if (paramsUrl.get(p)) document.getElementById(id).value = paramsUrl.get(p);
+  });
+
+  document.getElementById("card-aguardando").addEventListener("click", () => dashAbrirHistoricoAvaliacao({ avaliacao: "aguardando" }));
+  document.getElementById("card-conforme").addEventListener("click", () => dashAbrirHistoricoAvaliacao({ avaliacao: "conforme" }));
+  document.getElementById("card-revisao").addEventListener("click", () => dashAbrirHistoricoAvaliacao({ revisao: "pendente" }));
+  document.getElementById("card-contaminado").addEventListener("click", () => {
+    window.location.href = "contaminados.html?" + dashParamsFiltros(dashFiltrosAtuais, { filtrado: "1" }).toString();
   });
 
   document.getElementById("dash-btn-filtrar").addEventListener("click", dashCarregar);
@@ -577,5 +593,156 @@ function iniciarDashboard() {
   document.getElementById("dash-filtro-data-fim").addEventListener("change", atualizarEstadoComparar);
   atualizarEstadoComparar();
 
-  dashCarregar();
+  dashCarregar().then(() => {
+    if (window.location.hash === "#secao-operadores") {
+      const alvo = document.getElementById("secao-operadores");
+      if (alvo) alvo.scrollIntoView({ block: "start" });
+    }
+  });
+}
+
+// =======================================================================
+// v8 — CIPs realizados por operador, avaliação dos CIPs e resumo da Adega
+// =======================================================================
+function dashParamsFiltros(filtros, extra) {
+  const params = new URLSearchParams();
+  if (filtros.tipo) params.set("tipo", filtros.tipo);
+  if (filtros.equipamento) params.set("equipamento", filtros.equipamento);
+  if (filtros.dataInicio) params.set("dataInicio", filtros.dataInicio);
+  if (filtros.dataFim) params.set("dataFim", filtros.dataFim);
+  Object.entries(extra || {}).forEach(([k, v]) => params.set(k, v));
+  return params;
+}
+function dashAbrirHistoricoAvaliacao(extra) {
+  window.location.href = "historico.html?" + dashParamsFiltros(dashFiltrosAtuais, extra).toString();
+}
+
+function dashContagemPorOperador(registros) {
+  const contagem = {};
+  registros.forEach((r) => { contagem[r.nome_operador] = (contagem[r.nome_operador] || 0) + 1; });
+  return Object.entries(contagem).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
+}
+function dashQuebrarNome(nome, max) {
+  if (nome.length <= max) return nome;
+  const partes = nome.split(" "); const linhas = []; let atual = "";
+  partes.forEach((p) => { if ((atual + " " + p).trim().length > max && atual) { linhas.push(atual); atual = p; } else { atual = (atual + " " + p).trim(); } });
+  if (atual) linhas.push(atual);
+  return linhas;
+}
+// Escreve a quantidade na ponta de cada barra (dentro quando cabe).
+const dashPluginRotulosBarras = {
+  id: "rotulosBarras",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx; const meta = chart.getDatasetMeta(0); if (!meta || !meta.data) return;
+    ctx.save(); ctx.font = "600 12px 'IBM Plex Mono', Consolas, monospace"; ctx.textBaseline = "middle";
+    meta.data.forEach((barra, i) => {
+      const texto = String(chart.data.datasets[0].data[i]);
+      const largura = ctx.measureText(texto).width; const larguraBarra = barra.x - barra.base;
+      if (larguraBarra > largura + 14) { ctx.fillStyle = "#ffffff"; ctx.textAlign = "right"; ctx.fillText(texto, barra.x - 7, barra.y); }
+      else { ctx.fillStyle = "#1c2621"; ctx.textAlign = "left"; ctx.fillText(texto, barra.x + 6, barra.y); }
+    });
+    ctx.restore();
+  },
+};
+let dashGraficoOperadores = null;
+function dashAbrirOperador(nome) {
+  window.location.href = "operador.html?" + dashParamsFiltros(dashFiltrosAtuais, { nome }).toString();
+}
+function dashRenderizarOperadores(registros) {
+  if (dashGraficoOperadores) { dashGraficoOperadores.destroy(); dashGraficoOperadores = null; }
+  const dados = dashContagemPorOperador(registros);
+  const caixa = document.getElementById("caixa-operadores");
+  const lista = document.getElementById("lista-operadores");
+  caixa.style.height = Math.max(220, dados.length * 34 + 44) + "px";
+  lista.innerHTML = dados.length
+    ? `<span class="rotulo-lista">Abrir registros de um operador:</span>` + dados.map(([nome, qtd]) => `<button type="button" class="chip-operador" data-operador="${dashEscaparHtml(nome)}">${dashEscaparHtml(nome)}<strong>${qtd}</strong></button>`).join("")
+    : "";
+  lista.querySelectorAll(".chip-operador").forEach((b) => b.addEventListener("click", () => dashAbrirOperador(b.dataset.operador)));
+  caixa.innerHTML = '<canvas id="grafico-operadores"></canvas>';
+  if (!dados.length) {
+    caixa.style.height = "auto";
+    caixa.innerHTML = '<div class="estado-vazio">Sem dados disponíveis para o período/filtro selecionado.</div>';
+    return;
+  }
+  if (typeof Chart === "undefined") {
+    caixa.innerHTML = '<div class="estado-erro">Biblioteca de gráficos indisponível (verifique a conexão).</div>';
+    return;
+  }
+  dashGraficoOperadores = new Chart(document.getElementById("grafico-operadores"), {
+    type: "bar",
+    data: { labels: dados.map(([nome]) => dashQuebrarNome(nome, 22)), datasets: [{ label: "CIPs registrados", data: dados.map(([, q]) => q), backgroundColor: "#1f4d3a", hoverBackgroundColor: "#3c7a5c", borderRadius: 4, barThickness: 20 }] },
+    options: {
+      indexAxis: "y", maintainAspectRatio: false,
+      layout: { padding: { right: 28 } },
+      onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? "pointer" : "default"; },
+      onClick: (evt, els) => { if (els.length) dashAbrirOperador(dados[els[0].index][0]); },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { title: (items) => dados[items[0].dataIndex][0], label: (ctx) => `${ctx.parsed.x} registro(s) de CIP` } } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: "Quantidade de registros de CIP" } }, y: { ticks: { font: { size: 12 }, color: "#1c2621", autoSkip: false } } },
+    },
+    plugins: [dashPluginRotulosBarras],
+  });
+}
+
+function dashItemFila(r) {
+  return `
+    <div class="item-fila">
+      <div class="info">
+        <div class="t1">${dashEscaparHtml(cipRotuloTipo(r.tipo_cip))}</div>
+        <div class="t2">${cipFmtData(r.data_cip)} ${cipHora(r.hora_inicial)}${r.hora_final ? "–" + cipHora(r.hora_final) : ""} · ${cipRotuloEquipHtml(r)} · Operador: ${dashEscaparHtml(r.nome_operador)}</div>
+        <div style="margin-top:6px;">${cipSelos(r)}</div>
+      </div>
+      <a class="botao-link primario" href="historico.html?registroId=${encodeURIComponent(r.id)}&foco=avaliacao">${cipTemRevisao(r) ? "Reavaliar CIP" : "Avaliar CIP"}</a>
+    </div>`;
+}
+function dashRenderizarFila(containerId, contadorId, registros, vazio) {
+  const LIMITE = 5;
+  document.getElementById(contadorId).textContent = registros.length;
+  const el = document.getElementById(containerId);
+  if (!registros.length) { el.innerHTML = `<p class="sem-dado">${vazio}</p>`; return; }
+  el.innerHTML = registros.map((r, i) => dashItemFila(r).replace('class="item-fila"', `class="item-fila${i >= LIMITE ? " oculto" : ""}"`)).join("")
+    + (registros.length > LIMITE ? `<button type="button" class="botao-ver-mais" data-ver-mais="1">Ver mais ${registros.length - LIMITE}</button>` : "");
+  const btn = el.querySelector("[data-ver-mais]");
+  if (btn) btn.addEventListener("click", () => { el.querySelectorAll(".item-fila.oculto").forEach((x) => x.classList.remove("oculto")); btn.remove(); });
+}
+function dashAtualizarAvaliacao(registros) {
+  const ag = registros.filter((r) => cipSituacao(r) === "aguardando");
+  const co = registros.filter((r) => cipSituacao(r) === "conforme");
+  const ct = registros.filter((r) => cipSituacao(r) === "contaminado");
+  const rev = registros.filter((r) => cipTemRevisao(r));
+  const revCo = rev.filter((r) => cipSituacao(r) === "conforme").length;
+  const revCt = rev.filter((r) => cipSituacao(r) === "contaminado").length;
+  document.getElementById("akpi-aguardando").textContent = ag.length;
+  document.getElementById("akpi-conforme").textContent = co.length;
+  document.getElementById("akpi-contaminado").textContent = ct.length;
+  document.getElementById("akpi-revisao").textContent = rev.length;
+  document.getElementById("akpi-conforme-rev").innerHTML = revCo ? `dos quais <strong>${revCo}</strong> com revisão pendente` : "nenhum com revisão pendente";
+  document.getElementById("akpi-contaminado-rev").innerHTML = revCt ? `dos quais <strong>${revCt}</strong> com revisão pendente` : "nenhum com revisão pendente";
+  document.getElementById("akpi-revisao-detalhe").innerHTML = `Conforme: <strong id="akpi-revisao-conforme">${revCo}</strong> · Contaminado: <strong id="akpi-revisao-contaminado">${revCt}</strong>`;
+  const porData = (a, b) => (a.data_cip + a.hora_inicial).localeCompare(b.data_cip + b.hora_inicial);
+  dashRenderizarFila("fila-aguardando", "contador-fila-aguardando", [...ag].sort(porData), "Nenhum CIP aguardando avaliação nos filtros atuais.");
+  dashRenderizarFila("fila-revisao", "contador-fila-revisao", [...rev].sort((a, b) => String(a.revisao_desde).localeCompare(String(b.revisao_desde))), "Nenhum CIP com revisão necessária nos filtros atuais.");
+}
+
+// Resumo da Adega no painel do administrador.
+function montarResumoAdegaAdmin(situacoes) {
+  const el = document.getElementById("secao-adega-admin");
+  if (!el) return;
+  const ordem = { vencido: 0, hoje: 1, proximo: 2, semhistorico: 3, realizado: 4, emdia: 5 };
+  const sit = [...situacoes].sort((a, b) => ordem[a.status] - ordem[b.status]);
+  el.innerHTML = `
+    <div class="painel-grafico">
+      <div class="cabecalho-grafico">
+        <div><h3>Adega — vencimentos dos procedimentos periódicos</h3><p>Situação atual de cada procedimento por adega, calculada a partir dos registros.</p></div>
+        <a class="botao-link secundario" href="adega.html">Abrir aba Adega</a>
+      </div>
+      <div class="lista-equip">
+        ${sit.map((s) => `
+          <div class="item-equip">
+            <span class="marca-tipo" style="background:${CIP_CORES_TIPO[s.tipo]}"></span>
+            <div class="info"><div class="nome">${dashEscaparHtml(cipRotuloTipo(s.tipo))} — ${dashEscaparHtml(s.adega)}</div><div class="tipo">Próxima data prevista: ${s.proxima ? cipFmtData(s.proxima) : "—"} · ${cipTextoPrazo(s)}</div></div>
+            <div class="quando">${cipSeloStatus(s)}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
 }

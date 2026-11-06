@@ -18,6 +18,8 @@
       <nav class="navegacao-topo">
         <a href="painel.html" class="link-nav">Painel</a>
         <a href="historico.html" class="link-nav ativo">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
       </nav>
       <div class="usuario-topo">
         <span id="info-usuario"></span>
@@ -55,6 +57,26 @@
           <label for="f-equipamento">Equipamento</label>
           <input type="text" id="f-equipamento" placeholder="Ex.: Tanque de Fermentação 15" />
         </div>
+        <div class="campo-filtro">
+          <label for="f-avaliacao">Resultado da avaliação</label>
+          <select id="f-avaliacao">
+            <option value="">Todos</option>
+            <option value="aguardando">Aguardando avaliação</option>
+            <option value="conforme">Conforme</option>
+            <option value="contaminado">Contaminado</option>
+          </select>
+        </div>
+        <div class="campo-filtro">
+          <label for="f-revisao">Revisão</label>
+          <select id="f-revisao">
+            <option value="">Todas</option>
+            <option value="pendente">Revisão necessária</option>
+          </select>
+        </div>
+        <div class="campo-filtro">
+          <label for="f-bbt">BBT (CIP OSAM)</label>
+          <select id="f-bbt"><option value="">Todos</option></select>
+        </div>
         <div class="campo-filtro largo">
           <label for="f-texto">Pesquisar</label>
           <input type="text" id="f-texto" placeholder="Equipamento, operador ou observações" />
@@ -77,6 +99,7 @@
             <th>Equipamento</th>
             <th>Operador</th>
             <th>Hora Inicial</th>
+            <th>Avaliação</th>
             <th></th>
           </tr>
         </thead>
@@ -93,6 +116,8 @@
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/validarJustificativa.js"></script>
   <script src="js/historico.js"></script>
 </body>
 </html>

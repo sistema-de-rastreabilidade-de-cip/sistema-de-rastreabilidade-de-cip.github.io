@@ -130,9 +130,24 @@ const FORM_CONFIG = {
   },
 };
 
+// CIP OSAM (v8) — decisão aprovada: mesmo padrão e mesmos campos de
+// processo do CIP Completo (PO-JAC-FAB-004, Anexo 3), com hora final
+// igual ao Completo e, no lugar do equipamento, a identificação do BBT
+// escolhida numa lista fixa (BBT 01 a BBT 12) — sem digitação manual.
+// Nenhum campo novo (ex.: temperatura) foi acrescentado.
+const BBTS_OSAM = Array.from({ length: 12 }, (_, i) => `BBT ${String(i + 1).padStart(2, "0")}`);
+FORM_CONFIG.osam = {
+  titulo: "CIP OSAM — BBT",
+  documentoOrigem: "Campos do CIP Completo (PO-JAC-FAB-004, Anexo 3) + identificação do BBT",
+  bbt: { label: "BBT", opcoes: BBTS_OSAM },
+  temHoraFinal: true,
+  campos: FORM_CONFIG.completo.campos.map((c) => ({ ...c })),
+};
+
 const TIPO_CIP_LABELS = {
   alcalino_clorado: "CIP Alcalino Clorado",
   completo: "CIP Completo",
   tanque_levedura: "CIP Tanque de Levedura",
   linha_recuperacao_levedura: "CIP Linha de Recuperação de Levedura",
+  osam: "CIP OSAM",
 };

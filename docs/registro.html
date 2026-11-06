@@ -18,6 +18,8 @@
       <nav class="navegacao-topo">
         <a href="painel.html" class="link-nav">Painel</a>
         <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
       </nav>
       <div class="usuario-topo">
         <span id="info-usuario"></span>
@@ -32,6 +34,7 @@
     <div class="cartao">
       <h2 id="titulo-formulario" style="margin-top:0;"></h2>
       <p class="rodape-doc" id="doc-origem"></p>
+      <div id="aviso-adega"></div>
 
       <div id="mensagem"></div>
 
@@ -79,7 +82,7 @@
 
         <div class="botoes">
           <button type="submit" class="primario" id="btn-salvar">Salvar</button>
-          <a class="secundario" href="painel.html" style="text-decoration:none;display:inline-flex;align-items:center;padding:0 20px;">Cancelar</a>
+          <a class="secundario" id="link-cancelar" href="painel.html" style="text-decoration:none;display:inline-flex;align-items:center;padding:0 20px;">Cancelar</a>
         </div>
       </form>
     </div>
@@ -91,6 +94,7 @@
   <script src="js/auth.js"></script>
   <script src="js/equipamentos.js"></script>
   <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
   <script src="js/validarJustificativa.js"></script>
   <script src="js/registro.js"></script>
 </body>

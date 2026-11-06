@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CIPs por operador — Rastreabilidade de CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="marca-logo" src="assets/logo-heineken-transparente.png" alt="Heineken" />
+      </div>
+      <nav class="navegacao-topo">
+        <a href="painel.html" class="link-nav">Painel</a>
+        <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+      </nav>
+      <div class="usuario-topo">
+        <span id="info-usuario"></span>
+        <button type="button" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <a class="link-voltar" id="link-voltar-grafico" href="painel.html#secao-operadores">&larr; Voltar ao gráfico</a>
+    <section>
+      <div class="secao-titulo"><h2 id="titulo-operador">CIPs realizados</h2></div>
+      <div class="resumo-filtros" id="resumo-filtros-operador"></div>
+      <div id="mensagem"></div>
+      <p class="texto-suave" id="total-operador"></p>
+      <div class="cartao">
+        <table class="tabela-historico">
+          <thead><tr><th>Data e horário</th><th>Tipo de CIP</th><th>Equipamento</th><th>Avaliação</th><th></th></tr></thead>
+          <tbody id="corpo-tabela-operador"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/operador.js"></script>
+</body>
+</html>

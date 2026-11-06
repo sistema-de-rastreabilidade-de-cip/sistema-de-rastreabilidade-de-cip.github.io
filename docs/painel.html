@@ -18,6 +18,8 @@
       <nav class="navegacao-topo">
         <a href="painel.html" class="link-nav ativo">Painel</a>
         <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
       </nav>
       <div class="usuario-topo">
         <span id="info-usuario"></span>
@@ -97,7 +99,7 @@
           <span class="selo-area">Área administrativa</span>
         </div>
         <p class="texto-suave" style="margin:-4px 0 16px;">
-          Indicadores e gráficos calculados a partir dos registros reais do Supabase. Use os filtros para refinar o período, tipo de CIP ou equipamento — eles atualizam os cartões e os 4 gráficos abaixo.
+          Indicadores e gráficos calculados a partir dos registros reais do Supabase. Use os filtros para refinar o período, tipo de CIP ou equipamento — eles atualizam o gráfico por operador, a avaliação dos CIPs, os cartões e os gráficos abaixo.
         </p>
 
         <div class="barra-filtros">
@@ -127,6 +129,63 @@
       <div id="dash-mensagem"></div>
       <p class="texto-suave" id="dash-aviso-limite" style="margin:-10px 0 0;"></p>
 
+      <!-- v8 — prioridade 1: CIPs realizados por operador -->
+      <section id="secao-operadores">
+        <div class="painel-grafico">
+          <div class="cabecalho-grafico">
+            <div>
+              <h3>CIPs realizados por operador</h3>
+              <p>Quantidade de registros de CIP por operador no período e filtros selecionados (não é percentual de execução). Clique em uma barra para ver os registros do operador.</p>
+            </div>
+          </div>
+          <div class="grafico-caixa-operadores" id="caixa-operadores"><canvas id="grafico-operadores"></canvas></div>
+          <div class="lista-operadores" id="lista-operadores"></div>
+        </div>
+      </section>
+
+      <!-- v8 — prioridade 2: avaliação dos CIPs + filas -->
+      <section id="secao-avaliacao-admin">
+        <h2 class="secao-titulo">Avaliação dos CIPs</h2>
+        <div class="grid-kpi-4av">
+          <button type="button" class="kpi-cartao kpi-av-aguardando" id="card-aguardando">
+            <div class="kpi-rotulo">Aguardando avaliação</div>
+            <div class="kpi-valor grande" id="akpi-aguardando" style="color:#5a625d">—</div>
+            <div class="kpi-link" style="color:#5a625d">Ver no histórico</div>
+          </button>
+          <button type="button" class="kpi-cartao kpi-av-conforme" id="card-conforme">
+            <div class="kpi-rotulo">Conforme</div>
+            <div class="kpi-valor grande" id="akpi-conforme" style="color:var(--cor-sucesso)">—</div>
+            <div class="kpi-sub" id="akpi-conforme-rev"></div>
+            <div class="kpi-link" style="color:var(--cor-sucesso)">Ver no histórico</div>
+          </button>
+          <button type="button" class="kpi-cartao kpi-av-contaminado" id="card-contaminado">
+            <div class="kpi-rotulo">Contaminado</div>
+            <div class="kpi-valor grande" id="akpi-contaminado" style="color:var(--cor-erro)">—</div>
+            <div class="kpi-sub" id="akpi-contaminado-rev"></div>
+            <div class="kpi-link" style="color:var(--cor-erro)">Abrir CIPs contaminados no filtro</div>
+          </button>
+          <button type="button" class="kpi-cartao kpi-av-revisao" id="card-revisao">
+            <div class="kpi-rotulo">Revisão necessária</div>
+            <div class="kpi-valor grande" id="akpi-revisao" style="color:#9a5c00">—</div>
+            <div class="kpi-sub" id="akpi-revisao-detalhe"></div>
+            <div class="kpi-link" style="color:#9a5c00">Ver no histórico</div>
+          </button>
+        </div>
+        <p class="sem-dado" style="margin-top:6px;">Os totais seguem os filtros acima. "Revisão necessária" é uma sinalização à parte: o registro mantém a última classificação (Conforme ou Contaminado), mas teve dados alterados depois dela e ainda não foi reavaliado. A classificação é sempre decisão do supervisor.</p>
+        <div class="grid-fila">
+          <div class="caixa-fila fila-aguardando">
+            <h3>CIPs aguardando avaliação <span class="contador" id="contador-fila-aguardando">0</span></h3>
+            <p class="sub">Registros que ainda não receberam a primeira avaliação.</p>
+            <div id="fila-aguardando"></div>
+          </div>
+          <div class="caixa-fila fila-revisao">
+            <h3>Revisão necessária <span class="contador" id="contador-fila-revisao">0</span></h3>
+            <p class="sub">Já avaliados, mas com dados alterados depois da avaliação.</p>
+            <div id="fila-revisao"></div>
+          </div>
+        </div>
+      </section>
+
       <section>
         <div class="grid-kpi">
           <div class="kpi-cartao">
@@ -148,9 +207,6 @@
         </div>
       </section>
 
-      <p class="texto-suave" style="margin-top:-10px;">
-        Um cartão de "registros que necessitam de revisão" não foi incluído: a tabela de registros não tem nenhuma coluna de status ou conformidade, e nenhum valor de referência oficial foi informado para os parâmetros — criar essa classificação aqui seria inventar uma regra que não existe hoje.
-      </p>
 
       <section>
         <div class="grid-graficos-4">
@@ -201,6 +257,8 @@
           </div>
         </div>
       </section>
+
+      <section id="secao-adega-admin"></section>
     </div>
   </main>
 
@@ -210,6 +268,7 @@
   <script src="js/supabaseClient.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/operadorPainel.js"></script>
   <script>
@@ -220,6 +279,10 @@
 
       document.getElementById("info-usuario").textContent =
         `${perfil.nome} (${perfil.role === "administrador" ? "Administrador" : "Operador"})`;
+
+      cipInicializarPagina(perfil, { modalAoEntrar: true }).then((adega) => {
+        if (adega && perfil.role === "administrador") montarResumoAdegaAdmin(adega.situacoes);
+      });
 
       if (perfil.role === "operador") {
         document.getElementById("area-operador").classList.remove("oculto");

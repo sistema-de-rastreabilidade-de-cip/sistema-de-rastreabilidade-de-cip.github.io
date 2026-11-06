@@ -1288,3 +1288,166 @@ table.tabela-historico tbody tr:hover {
     font-size: 0.95rem;
   }
 }
+
+/* =====================================================================
+   CIP v8 — avaliação, revisão necessária, Adega, OSAM, CIPs contaminados
+   (portado da demonstração v8 aprovada)
+   ===================================================================== */
+.secao-bloco { border-top: 1px solid var(--cor-borda); padding-top: 16px; margin-top: 16px; }
+.secao-bloco h4 { margin: 0 0 10px; font-size: 0.88rem; color: var(--cor-primaria-escura); }
+.item-obs, .item-edicao { background: var(--cor-fundo-secao); border-radius: var(--raio-pequeno); padding: 10px 12px; margin-bottom: 8px; font-size: 0.82rem; }
+.item-obs .meta, .item-edicao .meta { color: var(--cor-texto-suave); font-size: 0.74rem; margin-bottom: 4px; }
+.tag-bbt { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em; color: #4a4680; background: #ecebf6; border: 1px solid #d3d1ea; border-radius: 4px; padding: 1px 6px; margin-right: 5px; vertical-align: 1px; }
+.cabecalho-grafico { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.cabecalho-grafico h3 { margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--cor-primaria-escura); letter-spacing: 0.01em; }
+.cabecalho-grafico p { margin: 3px 0 0; font-size: 0.8rem; color: var(--cor-texto-suave); }
+.grafico-caixa-operadores { position: relative; min-width: 0; }
+.lista-operadores { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--cor-borda); }
+.lista-operadores .rotulo-lista { width: 100%; font-size: 0.74rem; color: var(--cor-texto-suave); }
+.chip-operador { font-family: var(--fonte-texto); font-size: 0.8rem; background: var(--cor-fundo-secao); border: 1px solid var(--cor-borda-forte); color: var(--cor-primaria-escura); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.chip-operador:hover { background: var(--cor-borda); }
+.chip-operador strong { font-family: var(--fonte-dados); margin-left: 6px; }
+.resumo-filtros { font-size: 0.8rem; color: var(--cor-texto-suave); background: var(--cor-fundo-secao); border-radius: var(--raio-pequeno); padding: 8px 12px; margin: 10px 0 14px; }
+.grid-adegas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cartao-adega { background: var(--cor-branco); border: 1px solid var(--cor-borda); border-radius: var(--raio); padding: 18px 20px; min-width: 0; }
+.cartao-adega h3 { margin: 0 0 12px; font-size: 1rem; color: var(--cor-primaria-escura); }
+.proc-adega { border: 1px solid var(--cor-borda); border-left-width: 4px; border-radius: var(--raio-pequeno); padding: 12px 14px; margin-bottom: 10px; }
+.proc-adega:last-child { margin-bottom: 0; }
+.proc-adega.st-vencido { border-left-color: var(--cor-erro); }
+.proc-adega.st-hoje { border-left-color: #c47a12; }
+.proc-adega.st-proximo { border-left-color: #d7a83a; }
+.proc-adega.st-realizado { border-left-color: var(--cor-sucesso); }
+.proc-adega.st-emdia { border-left-color: var(--cor-primaria-clara); }
+.proc-adega.st-semhistorico { border-left-color: var(--cor-borda-forte); }
+.proc-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.proc-nome { font-weight: 600; font-size: 0.92rem; }
+.proc-periodo { font-size: 0.76rem; color: var(--cor-texto-suave); margin-top: 1px; }
+.proc-datas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 10px 0 0; }
+.proc-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
+.proc-acoes .campo-filtro input { min-width: 0; }
+.selo-status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.selo-status.st-vencido { background: var(--cor-erro-fundo); color: var(--cor-erro); border: 1px solid var(--cor-erro-borda); }
+.selo-status.st-hoje { background: #fdebd3; color: #8a4f06; border: 1px solid #f0c98f; }
+.selo-status.st-proximo { background: var(--cor-aviso-fundo); color: var(--cor-aviso); border: 1px solid var(--cor-aviso-borda); }
+.selo-status.st-realizado { background: var(--cor-sucesso-fundo); color: var(--cor-sucesso); border: 1px solid var(--cor-sucesso-borda); }
+.selo-status.st-emdia { background: #e6efe9; color: var(--cor-primaria); border: 1px solid #c9dccf; }
+.selo-status.st-semhistorico { background: var(--cor-fundo-secao); color: var(--cor-texto-suave); border: 1px solid var(--cor-borda-forte); }
+.selo-avaliacao { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid; }
+.selo-avaliacao::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.selo-avaliacao.av-aguardando { background: #eef0ee; color: #5a625d; border-color: #cfd5d0; }
+.selo-avaliacao.av-conforme { background: var(--cor-sucesso-fundo); color: var(--cor-sucesso); border-color: var(--cor-sucesso-borda); }
+.selo-avaliacao.av-contaminado { background: var(--cor-erro-fundo); color: var(--cor-erro); border-color: var(--cor-erro-borda); }
+.item-registro .selo-avaliacao { flex-shrink: 0; }
+.bloco-avaliacao { border: 1px solid var(--cor-borda); border-left-width: 5px; border-radius: var(--raio); padding: 14px 16px; }
+.bloco-avaliacao.av-aguardando { border-left-color: #9aa39d; }
+.bloco-avaliacao.av-conforme { border-left-color: var(--cor-sucesso); }
+.bloco-avaliacao.av-contaminado { border-left-color: var(--cor-erro); background: #fffafa; }
+.opcoes-avaliacao { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.opcao-avaliacao { display: flex; align-items: center; gap: 8px; border: 1px solid var(--cor-borda-forte); border-radius: var(--raio-pequeno); padding: 8px 12px; cursor: pointer; font-size: 0.86rem; font-weight: 600; }
+.opcao-avaliacao input { width: auto; margin: 0; }
+.opcao-avaliacao.op-conforme { color: var(--cor-sucesso); }
+.opcao-avaliacao.op-contaminado { color: var(--cor-erro); }
+.kpi-cartao.kpi-av-aguardando { border-left: 4px solid #9aa39d; }
+.kpi-cartao.kpi-av-conforme { border-left: 4px solid var(--cor-sucesso); }
+.kpi-cartao.kpi-av-contaminado { border-left: 4px solid var(--cor-erro); }
+.kpi-cartao .kpi-acao { margin-top: auto; font-size: 0.78rem; font-weight: 600; color: var(--cor-erro); background: none; border: none; padding: 0; text-align: left; cursor: pointer; font-family: var(--fonte-texto); }
+.selo-revisao { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #fff3d6; color: #7a4a00; border: 1px solid #f0c66b; white-space: normal; line-height: 1.3; }
+.selo-revisao::before { content: "!"; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #c47a12; color: #fff; font-size: 0.66rem; flex-shrink: 0; }
+.selos-avaliacao { display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.aviso-revisao { background: #fff8e8; border: 1px solid #f0c66b; border-left: 5px solid #c47a12; border-radius: var(--raio); padding: 10px 14px; font-size: 0.86rem; color: #5e3a00; margin-bottom: 12px; }
+#secao-avaliacao, #secao-operadores { scroll-margin-top: 140px; }
+@media (max-width: 680px) { #secao-avaliacao, #secao-operadores { scroll-margin-top: 50px; } }
+.grid-kpi-4av { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+button.kpi-cartao { font-family: var(--fonte-texto); text-align: left; cursor: pointer; width: 100%; }
+button.kpi-cartao:hover { border-color: var(--cor-borda-forte); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+button.kpi-cartao:focus-visible { outline: 2px solid var(--cor-primaria-clara); outline-offset: 2px; }
+.kpi-cartao.kpi-av-revisao { border-left: 4px solid #c47a12; }
+.kpi-cartao .kpi-valor.grande { font-size: 2.3rem; }
+.kpi-cartao .kpi-sub { font-size: 0.76rem; color: var(--cor-texto-suave); }
+.kpi-cartao .kpi-link { font-size: 0.76rem; font-weight: 600; margin-top: auto; }
+.grid-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.caixa-fila { background: var(--cor-branco); border: 1px solid var(--cor-borda); border-radius: var(--raio); padding: 14px 16px; min-width: 0; }
+.caixa-fila h3 { margin: 0 0 4px; font-size: 0.95rem; color: var(--cor-primaria-escura); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.caixa-fila .sub { font-size: 0.78rem; color: var(--cor-texto-suave); margin: 0 0 10px; }
+.caixa-fila.fila-revisao { border-top: 3px solid #c47a12; }
+.caixa-fila.fila-aguardando { border-top: 3px solid #9aa39d; }
+.item-fila { border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); padding: 10px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.item-fila .info { flex: 1; min-width: 200px; }
+.item-fila .t1 { font-weight: 600; font-size: 0.88rem; }
+.item-fila .t2 { font-size: 0.78rem; color: var(--cor-texto-suave); margin-top: 2px; }
+.contador { font-family: var(--fonte-dados); font-size: 0.78rem; background: var(--cor-fundo-secao); border-radius: 999px; padding: 1px 8px; }
+.faixa-consulta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--cor-fundo-secao); border-radius: var(--raio-pequeno); padding: 10px 12px; margin-bottom: 12px; font-size: 0.82rem; }
+@media (max-width: 1100px) { .grid-kpi-4av { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) { .grid-fila { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .grid-kpi-4av { grid-template-columns: minmax(0, 1fr); } }
+.config-adega { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.legenda-status { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* faixa de alerta persistente (enquanto houver CIP de Adega pendente) */
+.faixa-alerta-adega { background: #fff4f2; border-bottom: 1px solid var(--cor-erro-borda); }
+.faixa-alerta-adega .interno { width: 90%; max-width: 1760px; margin: 0 auto; padding: 10px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.faixa-alerta-adega .icone-alerta { width: 30px; height: 30px; flex-shrink: 0; color: var(--cor-erro); }
+.faixa-alerta-adega .texto { flex: 1; min-width: 200px; font-size: 0.86rem; color: #6d2323; }
+.faixa-alerta-adega .texto strong { color: var(--cor-erro); }
+.faixa-alerta-adega.so-hoje { background: #fff8ec; border-bottom-color: #f0c98f; }
+.faixa-alerta-adega.so-hoje .icone-alerta { color: #c47a12; }
+.faixa-alerta-adega.so-hoje .texto, .faixa-alerta-adega.so-hoje .texto strong { color: #7a4605; }
+
+/* modal de alerta ao entrar */
+.modal-fundo { position: fixed; inset: 0; background: rgba(20, 30, 25, 0.55); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal-alerta { background: var(--cor-branco); border-radius: 10px; width: 100%; max-width: 560px; max-height: calc(100vh - 32px); overflow-y: auto; border-top: 6px solid var(--cor-erro); box-shadow: 0 18px 50px rgba(0,0,0,0.25); }
+.modal-alerta.so-hoje { border-top-color: #c47a12; }
+.modal-cabecalho { display: flex; gap: 14px; align-items: center; padding: 20px 22px 8px; }
+.modal-cabecalho svg { width: 46px; height: 46px; flex-shrink: 0; }
+.modal-cabecalho h2 { margin: 0; font-size: 1.08rem; color: var(--cor-texto); }
+.modal-cabecalho p { margin: 3px 0 0; font-size: 0.82rem; color: var(--cor-texto-suave); }
+.modal-corpo { padding: 8px 22px 6px; display: flex; flex-direction: column; gap: 10px; }
+.item-pendente { border: 1px solid var(--cor-borda); border-left-width: 5px; border-radius: var(--raio); padding: 12px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.item-pendente.st-vencido { border-left-color: var(--cor-erro); background: #fffafa; }
+.item-pendente.st-hoje { border-left-color: #c47a12; background: #fffdf8; }
+.item-pendente .info { flex: 1; min-width: 180px; }
+.item-pendente .nome { font-weight: 700; font-size: 0.92rem; }
+.item-pendente .meta { font-size: 0.8rem; color: var(--cor-texto-suave); margin-top: 2px; }
+.modal-rodape { padding: 12px 22px 18px; display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.modal-rodape .nota { font-size: 0.74rem; color: var(--cor-texto-suave); flex: 1; min-width: 180px; }
+
+@media (max-width: 980px) { .grid-adegas { grid-template-columns: minmax(0, 1fr); } .faixa-alerta-adega .interno { width: 94%; } }
+.kpi-cartao .kpi-acao { margin-top: auto; font-size: 0.78rem; font-weight: 600; color: var(--cor-erro); background: none; border: none; padding: 0; text-align: left; cursor: pointer; font-family: var(--fonte-texto); }
+#secao-avaliacao, #secao-operadores { scroll-margin-top: 140px; }
+@media (max-width: 680px) { #secao-avaliacao, #secao-operadores { scroll-margin-top: 50px; } }
+button.kpi-cartao { font-family: var(--fonte-texto); text-align: left; cursor: pointer; width: 100%; }
+button.kpi-cartao:hover { border-color: var(--cor-borda-forte); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+button.kpi-cartao:focus-visible { outline: 2px solid var(--cor-primaria-clara); outline-offset: 2px; }
+.contador { font-family: var(--fonte-dados); font-size: 0.78rem; background: var(--cor-fundo-secao); border-radius: 999px; padding: 1px 8px; }
+.grid-kpi-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .grid-kpi-3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .proc-datas { grid-template-columns: minmax(0, 1fr); }
+  .faixa-alerta-adega .interno { width: 100%; padding: 10px 16px; }
+  .modal-cabecalho { padding: 16px 16px 6px; }
+  .modal-corpo { padding: 6px 16px; }
+  .modal-rodape { padding: 10px 16px 16px; }
+}
+.link-nav.so-admin.oculto { display: none; }
+.faixa-alerta-adega .interno button.primario { padding: 8px 14px; font-size: 0.84rem; }
+.item-fila button.primario { padding: 8px 14px; font-size: 0.84rem; }
+.tabela-historico tr.clicavel { cursor: pointer; }
+.selos-avaliacao .selo-revisao { white-space: normal; }
+.diff-edicao { margin: 6px 0 8px 18px; padding: 0; }
+.campo-dado .valor .tag-bbt { margin-right: 4px; }
+.aviso-formulario { background: var(--cor-fundo-secao); border-radius: var(--raio-pequeno); padding: 9px 12px; font-size: 0.84rem; color: var(--cor-texto-suave); margin: 0 0 12px; }
+@media (max-width: 860px) {
+  table.tabela-historico td .selos-avaliacao { justify-content: flex-end; }
+}
+a.botao-link { font-family: var(--fonte-texto); font-size: 0.86rem; padding: 9px 16px; border-radius: var(--raio); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+a.botao-link.primario { background: var(--cor-primaria); color: #fff; border: 1px solid var(--cor-primaria-escura); }
+a.botao-link.primario:hover { background: var(--cor-primaria-escura); }
+a.botao-link.secundario { background: var(--cor-branco); color: var(--cor-texto); border: 1px solid var(--cor-borda-forte); }
+a.botao-link.secundario:hover { background: var(--cor-fundo-secao); }
+a.botao-link:focus-visible, button:focus-visible { outline: 2px solid var(--cor-primaria-clara); outline-offset: 2px; }
+/* Espaçamento vertical uniforme entre as seções das visões do painel
+   (as áreas de operador/administrador são div internas de main.conteudo). */
+#area-administrador:not(.oculto), #area-operador:not(.oculto) { display: flex; flex-direction: column; gap: 26px; }
+#area-administrador > #dash-mensagem:empty, #area-administrador > #dash-aviso-limite:empty, #area-administrador > #secao-adega-admin:empty { display: none; }
+#area-administrador > #dash-aviso-limite { margin: 0 !important; }
+main.conteudo > #mensagem:empty, section > #mensagem:empty { display: none; }
