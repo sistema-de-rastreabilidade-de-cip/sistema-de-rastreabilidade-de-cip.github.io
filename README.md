@@ -69,7 +69,7 @@ Mudanças no banco: nova migração em `supabase/migrations/` (com o script de d
 
 - **Só o site:** reverter o merge no `main` (o banco da v8 continua compatível com o
   site anterior: as mudanças são aditivas e `editar_registro_cip` aceita a chamada
-  antiga de 10 parâmetros). Ponto de retorno marcado com a tag `pre-v8`.
+  antiga de 10 parâmetros). Ponto de retorno: branch `retorno/pre-v8` (commit `321313d`).
 - **Banco:** `supabase/rollback/20261106120100_cip_v8_estrutura_desfazer.sql`, depois de
   exportar avaliações, datas-base e registros OSAM (esses dados são removidos).
 
