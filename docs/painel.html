@@ -20,6 +20,8 @@
         <a href="historico.html" class="link-nav">Histórico</a>
         <a href="adega.html" class="link-nav">Adega</a>
         <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+        <a href="relatorios.html" class="link-nav so-admin oculto">Relatórios</a>
+        <a href="gestao.html" class="link-nav so-admin oculto">Gestão</a>
       </nav>
       <div class="usuario-topo">
         <span id="info-usuario"></span>
@@ -146,6 +148,7 @@
       <!-- v8 — prioridade 2: avaliação dos CIPs + filas -->
       <section id="secao-avaliacao-admin">
         <h2 class="secao-titulo">Avaliação dos CIPs</h2>
+        <div class="resumo-supervisor" id="resumo-supervisor" aria-live="polite"></div>
         <div class="grid-kpi-4av">
           <button type="button" class="kpi-cartao kpi-av-aguardando" id="card-aguardando">
             <div class="kpi-rotulo">Aguardando avaliação</div>
@@ -172,6 +175,24 @@
           </button>
         </div>
         <p class="sem-dado" style="margin-top:6px;">Os totais seguem os filtros acima. "Revisão necessária" é uma sinalização à parte: o registro mantém a última classificação (Conforme ou Contaminado), mas teve dados alterados depois dela e ainda não foi reavaliado. A classificação é sempre decisão do supervisor.</p>
+        <div class="barra-filtros barra-filas">
+          <div class="campo-filtro">
+            <label for="fila-status">Mostrar nas filas</label>
+            <select id="fila-status">
+              <option value="todas">Aguardando e revisão</option>
+              <option value="aguardando">Só aguardando avaliação</option>
+              <option value="revisao">Só revisão necessária</option>
+            </select>
+          </div>
+          <div class="campo-filtro">
+            <label for="fila-ordem">Ordenar por tempo de espera</label>
+            <select id="fila-ordem">
+              <option value="antigo">Mais antigo primeiro</option>
+              <option value="recente">Mais recente primeiro</option>
+            </select>
+          </div>
+          <span class="sem-dado nota-filas">O período e os demais filtros do topo também valem para as filas. Os tempos usam os horários gravados no banco, no fuso da fábrica.</span>
+        </div>
         <div class="grid-fila">
           <div class="caixa-fila fila-aguardando">
             <h3>CIPs aguardando avaliação <span class="contador" id="contador-fila-aguardando">0</span></h3>

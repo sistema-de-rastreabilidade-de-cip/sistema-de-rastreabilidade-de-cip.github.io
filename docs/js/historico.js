@@ -178,39 +178,7 @@ function renderizarCamposDados(tipoCip, dados) {
 
 // ---- Diferenças de uma edição (valores_anteriores x valores_novos) ----
 function diferencasEdicao(e, tipoCip) {
-  const antes = e.valores_anteriores || {};
-  const depois = e.valores_novos || {};
-  const config = FORM_CONFIG[tipoCip] || { campos: [] };
-  const diffs = [];
-  const fmt = (chave, valor) => {
-    if (valor === null || valor === undefined || valor === "") return "—";
-    if (chave === "data_cip") return formatarData(valor);
-    if (chave === "hora_inicial" || chave === "hora_final") return cipHora(valor);
-    return String(valor);
-  };
-  const comparar = (rotulo, chave, a, d) => {
-    const va = fmt(chave, a);
-    const vd = fmt(chave, d);
-    if (va !== vd) diffs.push({ rotulo, de: va, para: vd });
-  };
-  if (tipoCip === "osam") comparar("BBT", "bbt", antes.bbt, depois.bbt);
-  else comparar("Equipamento", "equipamento", antes.equipamento, depois.equipamento);
-  comparar("Data do CIP", "data_cip", antes.data_cip, depois.data_cip);
-  comparar("Hora inicial", "hora_inicial", antes.hora_inicial, depois.hora_inicial);
-  comparar("Hora final", "hora_final", antes.hora_final, depois.hora_final);
-  comparar("Operador", "nome_operador", antes.nome_operador, depois.nome_operador);
-  comparar("Observações do operador", "observacoes_operador", antes.observacoes_operador, depois.observacoes_operador);
-  const dadosA = antes.dados || {};
-  const dadosD = depois.dados || {};
-  const chavesConhecidas = new Set();
-  config.campos.forEach((c) => {
-    chavesConhecidas.add(c.key);
-    comparar(c.label, c.key, dadosA[c.key], dadosD[c.key]);
-  });
-  new Set([...Object.keys(dadosA), ...Object.keys(dadosD)]).forEach((k) => {
-    if (!chavesConhecidas.has(k)) comparar(k, k, dadosA[k], dadosD[k]);
-  });
-  return diffs;
+  return cipDiferencasEdicao(e, tipoCip);
 }
 
 // ---- Avaliação do CIP ----

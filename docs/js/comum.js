@@ -102,7 +102,7 @@ function cipSelos(r) { return `<span class="selos-avaliacao">${cipSeloAvaliacao(
 // em todos os tipos. O banco aplica a mesma regra (cip_data_futura_bloqueada).
 let CIP_CONFIG = { dias_aviso_adega: 30, bloquear_data_futura: true, tipos_data_futura: ["alcalino_clorado", "completo", "tanque_levedura", "linha_recuperacao_levedura", "osam"] };
 async function cipCarregarConfiguracao() {
-  const { data, error } = await supabaseClient.from("cip_configuracao").select("dias_aviso_adega, bloquear_data_futura, tipos_data_futura").eq("id", 1).maybeSingle();
+  const { data, error } = await supabaseClient.from("cip_configuracao").select("*").eq("id", 1).maybeSingle();
   if (!error && data) CIP_CONFIG = data;
   return CIP_CONFIG;
 }
@@ -291,4 +291,137 @@ async function cipInicializarPagina(perfil, opcoes) {
     if (!jaMostrado) cipAbrirModalAdega(CIP_ADEGA_ATUAL.situacoes);
   }
   return CIP_ADEGA_ATUAL;
+}
+
+// =====================================================================
+// v8.1 — nomes de pessoas, tempos de espera, diferenças de edição,
+// exportação (CSV/arquivo) e integridade (SHA-256)
+// =====================================================================
+
+// Mesmas regras do banco (cip_normalizar_nome / cip_nome_pessoa_valido).
+function cipNormalizarNome(nome) { return String(nome || "").replace(/\s+/g, " ").trim(); }
+function cipChaveNome(nome) { return cipNormalizarNome(nome).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+function cipNomeValido(nome) {
+  const n = cipNormalizarNome(nome);
+  if (n.length < 2 || n.length > 80) return false;
+  if (!/^[A-Za-zÀ-ÖØ-öø-ÿ .'-]+$/.test(n)) return false;
+  return n.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").length >= 2;
+}
+const CIP_MSG_NOME_INVALIDO = "use de 2 a 80 caracteres, só letras, espaços, ponto, hífen ou apóstrofo.";
+
+let CIP_OPERADORES = null;
+async function cipCarregarOperadores() {
+  const { data, error } = await supabaseClient.from("cip_operadores").select("id, nome, ativo").order("nome");
+  CIP_OPERADORES = error ? [] : data || [];
+  return CIP_OPERADORES;
+}
+
+// Duração legível: "45 min", "5 h 10 min", "3 d 4 h".
+function cipDuracao(ms) {
+  if (ms == null || isNaN(ms)) return "—";
+  const min = Math.max(0, Math.floor(ms / 60000));
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} h${min % 60 ? ` ${min % 60} min` : ""}`;
+  const d = Math.floor(h / 24);
+  return `${d} d${h % 24 ? ` ${h % 24} h` : ""}`;
+}
+function cipMsDesde(iso) { return iso ? Date.now() - new Date(iso).getTime() : null; }
+// Início/fim de um dia do calendário da fábrica em ISO (Brasil sem horário de verão desde 2019).
+function cipInicioDiaIso(chave) { return chave ? `${chave}T00:00:00-03:00` : null; }
+function cipFimDiaIso(chave) { return chave ? `${chave}T23:59:59.999-03:00` : null; }
+function cipMediana(valores) {
+  const v = valores.filter((x) => x != null && !isNaN(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+// Diferenças de uma edição (valores_anteriores x valores_novos), por rótulo.
+function cipDiferencasEdicao(e, tipoCip) {
+  const antes = e.valores_anteriores || {};
+  const depois = e.valores_novos || {};
+  const config = (typeof FORM_CONFIG !== "undefined" && FORM_CONFIG[tipoCip]) || { campos: [] };
+  const diffs = [];
+  const fmt = (chave, valor) => {
+    if (valor === null || valor === undefined || valor === "") return "—";
+    if (chave === "data_cip") return cipFmtData(valor);
+    if (chave === "hora_inicial" || chave === "hora_final") return cipHora(valor);
+    return String(valor);
+  };
+  const comparar = (rotulo, chave, a, d) => {
+    const va = fmt(chave, a);
+    const vd = fmt(chave, d);
+    if (va !== vd) diffs.push({ rotulo, de: va, para: vd });
+  };
+  if (tipoCip === "osam") comparar("BBT", "bbt", antes.bbt, depois.bbt);
+  else comparar("Equipamento", "equipamento", antes.equipamento, depois.equipamento);
+  comparar("Data do CIP", "data_cip", antes.data_cip, depois.data_cip);
+  comparar("Hora inicial", "hora_inicial", antes.hora_inicial, depois.hora_inicial);
+  comparar("Hora final", "hora_final", antes.hora_final, depois.hora_final);
+  comparar("Operador", "nome_operador", antes.nome_operador, depois.nome_operador);
+  comparar("Observações do operador", "observacoes_operador", antes.observacoes_operador, depois.observacoes_operador);
+  const dadosA = antes.dados || {};
+  const dadosD = depois.dados || {};
+  const conhecidas = new Set();
+  config.campos.forEach((c) => { conhecidas.add(c.key); comparar(c.label, c.key, dadosA[c.key], dadosD[c.key]); });
+  new Set([...Object.keys(dadosA), ...Object.keys(dadosD)]).forEach((k) => { if (!conhecidas.has(k)) comparar(k, k, dadosA[k], dadosD[k]); });
+  return diffs;
+}
+
+// ---- Exportação ----
+// Célula CSV segura: aspas escapadas e proteção contra fórmulas (= + - @).
+function cipCelulaCsv(valor) {
+  let s = valor == null ? "" : String(valor);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[";\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+// CSV no padrão do Excel em português: separador ";" e BOM UTF-8.
+function cipMontarCsv(cabecalho, linhas) {
+  return [cabecalho, ...linhas].map((l) => l.map(cipCelulaCsv).join(";")).join("\r\n");
+}
+function cipMontarTsv(cabecalho, linhas) {
+  const c = (v) => String(v == null ? "" : v).replace(/[\t\r\n]+/g, " ");
+  return [cabecalho, ...linhas].map((l) => l.map(c).join("\t")).join("\n");
+}
+function cipBaixarArquivo(nome, conteudo, tipo) {
+  const blob = new Blob([tipo && tipo.startsWith("text/csv") ? "﻿" + conteudo : conteudo], { type: tipo || "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+async function cipCopiarTexto(texto) {
+  try { await navigator.clipboard.writeText(texto); return true; }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = texto; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+async function cipSha256(texto) {
+  if (!(window.crypto && crypto.subtle)) return null;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function cipCarimboArquivo() {
+  const d = cipAgora();
+  return `${cipChaveData(d)}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+}
+// Busca linhas em lotes de ids (evita URLs longas demais).
+async function cipBuscarPorIds(tabela, colunas, campoId, ids, ordem) {
+  const lotes = [];
+  for (let i = 0; i < ids.length; i += 80) lotes.push(ids.slice(i, i + 80));
+  const resultados = await Promise.all(lotes.map((lote) => {
+    let q = supabaseClient.from(tabela).select(colunas).in(campoId, lote);
+    if (ordem) q = q.order(ordem, { ascending: true });
+    return q;
+  }));
+  const erro = resultados.find((r) => r.error);
+  if (erro) throw erro.error;
+  return resultados.flatMap((r) => r.data || []);
 }

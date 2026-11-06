@@ -14,12 +14,16 @@ docs/                      ← o sistema (o GitHub Pages publica a pasta /docs d
   adega.html               ← procedimentos periódicos da Adega A e B
   contaminados.html        ← CIPs contaminados (supervisor)
   operador.html            ← CIPs de um operador (aberto pelo gráfico do painel)
+  relatorios.html          ← relatórios de rastreabilidade: PDF, CSV, cópia para o Excel (supervisor)
+  gestao.html              ← operadores, parâmetros e backup (supervisor)
   js/config.js             ← URL e chave PÚBLICA do Supabase
   js/comum.js              ← datas no fuso da fábrica, selos, navegação, alerta da Adega
   js/formConfig.js         ← campos dos formulários oficiais (+ CIP OSAM)
 supabase/schema.sql        ← schema de referência anterior à v8
 supabase/migrations/       ← migrações da v8 (aplicadas em ordem)
 supabase/rollback/         ← scripts para desfazer cada migração
+documentacao/              ← segurança, backup/recuperação, operação, critérios de aceitação
+testes/                    ← testes automatizados (réplica local com dados fictícios)
 ```
 
 O sistema não tem funções de servidor próprias: o navegador conversa direto com o
@@ -56,6 +60,28 @@ só objetos `cip_*`, `adega_*`, `vw_cip_*`/`vw_adega_*` e as funções do CIP.
 - **Histórico de alterações** corrigido (coluna `criado_em`), agora com os campos que
   mudaram em cada edição.
 - **Observações administrativas:** o autor vem da conta logada, não do navegador.
+
+## Novidades da v8.1
+
+- **Operadores:** lista cadastrada pelo supervisor (Gestão), sem exclusão. O formulário
+  mostra a lista. Os nomes são padronizados e validados no banco. A lista pode se tornar
+  obrigatória (desligada por padrão).
+- **Filas do supervisor:** tempo desde o registro, tempo aguardando avaliação ou
+  reavaliação, destaque do mais antigo, ordenação e filtro de status. Limite de alerta
+  opcional, só com valor definido pela coordenação.
+- **Resumo do supervisor:** aguardando, revisões, mais antigo, avaliações no período,
+  tempo mediano até a 1ª avaliação e situação geral.
+- **Relatórios:** filtros por período, operador, equipamento, tipo e status. Saem em PDF
+  (impressão), CSV de registros e de histórico, ou cópia para colar no Excel, com código
+  SHA-256 de conferência.
+- **Backup:** cópia protegida dentro do banco, com verificação de integridade, arquivo para
+  download e recuperação não destrutiva, sempre com simulação antes
+  (`documentacao/BACKUP_E_RECUPERACAO.md`).
+- **Segurança:** ver `documentacao/AUDITORIA_SEGURANCA.md`.
+
+Migração: `supabase/migrations/20261107120000_cip_v8_1_operadores_backup.sql`, com
+desfazer em `supabase/rollback/`. Testes e critérios: `testes/README.md` e
+`documentacao/CRITERIOS_DE_ACEITACAO.md`.
 
 ## Atualizar
 

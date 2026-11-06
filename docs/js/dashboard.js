@@ -569,6 +569,9 @@ function iniciarDashboard() {
     window.location.href = "contaminados.html?" + dashParamsFiltros(dashFiltrosAtuais, { filtrado: "1" }).toString();
   });
 
+  document.getElementById("fila-status").addEventListener("change", dashAplicarStatusFilas);
+  document.getElementById("fila-ordem").addEventListener("change", () => dashAtualizarAvaliacao(dashRegistrosAtuais || []));
+
   document.getElementById("dash-btn-filtrar").addEventListener("click", dashCarregar);
   document.getElementById("dash-btn-limpar").addEventListener("click", () => {
     document.getElementById("dash-filtro-tipo").value = "";
@@ -593,7 +596,7 @@ function iniciarDashboard() {
   document.getElementById("dash-filtro-data-fim").addEventListener("change", atualizarEstadoComparar);
   atualizarEstadoComparar();
 
-  dashCarregar().then(() => {
+  cipCarregarConfiguracao().catch(() => {}).then(() => dashCarregar()).then(() => {
     if (window.location.hash === "#secao-operadores") {
       const alvo = document.getElementById("secao-operadores");
       if (alvo) alvo.scrollIntoView({ block: "start" });
@@ -684,26 +687,59 @@ function dashRenderizarOperadores(registros) {
   });
 }
 
-function dashItemFila(r) {
+// ---- Filas com tempo de espera (v8.1) ----
+// "Aguardando avaliação": desde a gravação do registro (criado_em).
+// "Aguardando reavaliação": desde a 1ª edição após a avaliação (revisao_desde).
+function dashInicioEspera(r) { return cipTemRevisao(r) ? r.revisao_desde : r.criado_em; }
+function dashAcimaLimite(r) {
+  const h = CIP_CONFIG.alerta_espera_horas;
+  return !!h && cipMsDesde(dashInicioEspera(r)) > h * 3600000;
+}
+function dashItemFila(r, extras) {
+  const rev = cipTemRevisao(r);
+  const espera = cipDuracao(cipMsDesde(dashInicioEspera(r)));
+  const marcas = [
+    extras && extras.maisAntigo ? '<span class="selo-tempo selo-mais-antigo">Mais antigo</span>' : "",
+    dashAcimaLimite(r) ? `<span class="selo-tempo selo-acima-limite">Acima do limite de ${CIP_CONFIG.alerta_espera_horas} h</span>` : "",
+  ].join("");
   return `
-    <div class="item-fila">
+    <div class="item-fila${dashAcimaLimite(r) ? " acima-limite" : ""}" data-registro="${dashEscaparHtml(r.id)}">
       <div class="info">
-        <div class="t1">${dashEscaparHtml(cipRotuloTipo(r.tipo_cip))}</div>
+        <div class="t1">${dashEscaparHtml(cipRotuloTipo(r.tipo_cip))} ${marcas}</div>
         <div class="t2">${cipFmtData(r.data_cip)} ${cipHora(r.hora_inicial)}${r.hora_final ? "–" + cipHora(r.hora_final) : ""} · ${cipRotuloEquipHtml(r)} · Operador: ${dashEscaparHtml(r.nome_operador)}</div>
+        <div class="t3 tempos-fila">
+          <span class="tempo-espera"><strong>${rev ? "Aguardando reavaliação" : "Aguardando avaliação"} há ${espera}</strong></span>
+          <span>Registrado há ${cipDuracao(cipMsDesde(r.criado_em))} (${cipFmtDataHora(r.criado_em)})</span>
+          ${rev ? `<span>Alterado após a avaliação em ${cipFmtDataHora(r.revisao_desde)}</span>` : ""}
+        </div>
         <div style="margin-top:6px;">${cipSelos(r)}</div>
       </div>
-      <a class="botao-link primario" href="historico.html?registroId=${encodeURIComponent(r.id)}&foco=avaliacao">${cipTemRevisao(r) ? "Reavaliar CIP" : "Avaliar CIP"}</a>
+      <a class="botao-link primario" href="historico.html?registroId=${encodeURIComponent(r.id)}&foco=avaliacao">${rev ? "Reavaliar CIP" : "Avaliar CIP"}</a>
     </div>`;
+}
+function dashOrdenarPorEspera(lista) {
+  const ordem = document.getElementById("fila-ordem") ? document.getElementById("fila-ordem").value : "antigo";
+  const t = (r) => new Date(dashInicioEspera(r)).getTime();
+  return [...lista].sort((a, b) => (ordem === "recente" ? t(b) - t(a) : t(a) - t(b)));
 }
 function dashRenderizarFila(containerId, contadorId, registros, vazio) {
   const LIMITE = 5;
   document.getElementById(contadorId).textContent = registros.length;
   const el = document.getElementById(containerId);
   if (!registros.length) { el.innerHTML = `<p class="sem-dado">${vazio}</p>`; return; }
-  el.innerHTML = registros.map((r, i) => dashItemFila(r).replace('class="item-fila"', `class="item-fila${i >= LIMITE ? " oculto" : ""}"`)).join("")
-    + (registros.length > LIMITE ? `<button type="button" class="botao-ver-mais" data-ver-mais="1">Ver mais ${registros.length - LIMITE}</button>` : "");
+  const ordenados = dashOrdenarPorEspera(registros);
+  const maisAntigoId = [...registros].sort((a, b) => new Date(dashInicioEspera(a)) - new Date(dashInicioEspera(b)))[0].id;
+  el.innerHTML = ordenados.map((r, i) => dashItemFila(r, { maisAntigo: r.id === maisAntigoId && registros.length > 1 })
+      .replace('class="item-fila', `class="item-fila${i >= LIMITE ? " oculto" : ""}`)).join("")
+    + (ordenados.length > LIMITE ? `<button type="button" class="botao-ver-mais" data-ver-mais="1">Ver mais ${ordenados.length - LIMITE}</button>` : "");
   const btn = el.querySelector("[data-ver-mais]");
   if (btn) btn.addEventListener("click", () => { el.querySelectorAll(".item-fila.oculto").forEach((x) => x.classList.remove("oculto")); btn.remove(); });
+}
+function dashAplicarStatusFilas() {
+  const st = document.getElementById("fila-status").value;
+  document.querySelector(".fila-aguardando").classList.toggle("oculto", st === "revisao");
+  document.querySelector(".fila-revisao").classList.toggle("oculto", st === "aguardando");
+  document.querySelector(".grid-fila").classList.toggle("uma-coluna", st !== "todas");
 }
 function dashAtualizarAvaliacao(registros) {
   const ag = registros.filter((r) => cipSituacao(r) === "aguardando");
@@ -719,9 +755,68 @@ function dashAtualizarAvaliacao(registros) {
   document.getElementById("akpi-conforme-rev").innerHTML = revCo ? `dos quais <strong>${revCo}</strong> com revisão pendente` : "nenhum com revisão pendente";
   document.getElementById("akpi-contaminado-rev").innerHTML = revCt ? `dos quais <strong>${revCt}</strong> com revisão pendente` : "nenhum com revisão pendente";
   document.getElementById("akpi-revisao-detalhe").innerHTML = `Conforme: <strong id="akpi-revisao-conforme">${revCo}</strong> · Contaminado: <strong id="akpi-revisao-contaminado">${revCt}</strong>`;
-  const porData = (a, b) => (a.data_cip + a.hora_inicial).localeCompare(b.data_cip + b.hora_inicial);
-  dashRenderizarFila("fila-aguardando", "contador-fila-aguardando", [...ag].sort(porData), "Nenhum CIP aguardando avaliação nos filtros atuais.");
-  dashRenderizarFila("fila-revisao", "contador-fila-revisao", [...rev].sort((a, b) => String(a.revisao_desde).localeCompare(String(b.revisao_desde))), "Nenhum CIP com revisão necessária nos filtros atuais.");
+  dashRenderizarFila("fila-aguardando", "contador-fila-aguardando", ag, "Nenhum CIP aguardando avaliação nos filtros atuais.");
+  dashRenderizarFila("fila-revisao", "contador-fila-revisao", rev, "Nenhum CIP com revisão necessária nos filtros atuais.");
+  dashAplicarStatusFilas();
+  dashRenderizarResumo(registros, ag, co, ct, rev);
+}
+
+// ---- Resumo do supervisor (v8.1) ----
+async function dashRenderizarResumo(registros, ag, co, ct, rev) {
+  const el = document.getElementById("resumo-supervisor");
+  if (!el) return;
+  const maisAntigo = (lista) => lista.length ? lista.reduce((a, b) => (new Date(dashInicioEspera(a)) <= new Date(dashInicioEspera(b)) ? a : b)) : null;
+  const ma = maisAntigo(ag); const mr = maisAntigo(rev);
+  const total = registros.length || 1;
+  const pct = (n) => Math.round((n / total) * 1000) / 10;
+  const limite = CIP_CONFIG.alerta_espera_horas;
+  const acima = limite ? [...ag, ...rev].filter(dashAcimaLimite).length : 0;
+  el.innerHTML = `
+    <div class="resumo-bloco"><span class="rotulo">Aguardando avaliação</span><span class="valor" id="resumo-aguardando">${ag.length}</span>
+      <span class="detalhe" id="resumo-mais-antigo">${ma ? `mais antigo há ${cipDuracao(cipMsDesde(dashInicioEspera(ma)))}` : "nenhum na fila"}</span></div>
+    <div class="resumo-bloco"><span class="rotulo">Revisões necessárias</span><span class="valor" id="resumo-revisoes">${rev.length}</span>
+      <span class="detalhe">${mr ? `mais antiga há ${cipDuracao(cipMsDesde(dashInicioEspera(mr)))}` : "nenhuma pendente"}</span></div>
+    <div class="resumo-bloco"><span class="rotulo">Avaliações registradas no período</span><span class="valor" id="resumo-avaliacoes-periodo">…</span>
+      <span class="detalhe" id="resumo-avaliacoes-detalhe">carregando</span></div>
+    <div class="resumo-bloco resumo-situacao"><span class="rotulo">Situação geral (${registros.length} registro${registros.length === 1 ? "" : "s"})</span>
+      <div class="barra-situacao" role="img" aria-label="Aguardando ${pct(ag.length)}%, Conforme ${pct(co.length)}%, Contaminado ${pct(ct.length)}%">
+        <span class="seg seg-aguardando" style="width:${pct(ag.length)}%"></span><span class="seg seg-conforme" style="width:${pct(co.length)}%"></span><span class="seg seg-contaminado" style="width:${pct(ct.length)}%"></span>
+      </div>
+      <span class="detalhe">Aguardando ${pct(ag.length)}% · Conforme ${pct(co.length)}% · Contaminado ${pct(ct.length)}%</span></div>
+    ${limite ? `<div class="resumo-bloco resumo-alerta${acima ? " com-alerta" : ""}"><span class="rotulo">Acima do limite de ${limite} h</span><span class="valor" id="resumo-acima-limite">${acima}</span><span class="detalhe">limite definido em Gestão</span></div>` : ""}`;
+
+  // Avaliações no período: eventos do histórico com data dentro do período
+  // escolhido (data do evento), respeitando os filtros de tipo/equipamento.
+  try {
+    const f = dashFiltrosAtuais || {};
+    let q = supabaseClient.from("cip_avaliacoes_historico").select("registro_id, tipo_evento, criado_em").order("criado_em", { ascending: false }).limit(5000);
+    if (f.dataInicio) q = q.gte("criado_em", cipInicioDiaIso(f.dataInicio));
+    if (f.dataFim) q = q.lte("criado_em", cipFimDiaIso(f.dataFim));
+    const { data, error } = await q;
+    if (error) throw error;
+    let eventos = data || [];
+    const ids = [...new Set(eventos.map((e) => e.registro_id))];
+    const regs = ids.length ? await cipBuscarPorIds("cip_registros", "id, criado_em, tipo_cip, equipamento", "id", ids) : [];
+    const porId = new Map(regs.map((r) => [r.id, r]));
+    eventos = eventos.filter((e) => {
+      const r = porId.get(e.registro_id);
+      if (!r) return false;
+      if (f.tipo && r.tipo_cip !== f.tipo) return false;
+      if (f.equipamento && !String(r.equipamento).toLowerCase().includes(String(f.equipamento).toLowerCase())) return false;
+      return true;
+    });
+    const primeiras = eventos.filter((e) => e.tipo_evento === "avaliacao");
+    const correcoes = eventos.filter((e) => e.tipo_evento === "correcao").length;
+    const aposRev = eventos.filter((e) => e.tipo_evento === "confirmacao_revisao" || e.tipo_evento === "reavaliacao_revisao").length;
+    const mediana = cipMediana(primeiras.map((e) => new Date(e.criado_em) - new Date(porId.get(e.registro_id).criado_em)));
+    document.getElementById("resumo-avaliacoes-periodo").textContent = eventos.length;
+    document.getElementById("resumo-avaliacoes-detalhe").innerHTML =
+      `${primeiras.length} primeira(s) · ${correcoes} correção(ões) · ${aposRev} após revisão` +
+      (mediana != null ? `<br>Tempo mediano até a 1ª avaliação: <strong id="resumo-mediana">${cipDuracao(mediana)}</strong>` : "");
+  } catch (e) {
+    document.getElementById("resumo-avaliacoes-periodo").textContent = "—";
+    document.getElementById("resumo-avaliacoes-detalhe").textContent = "não foi possível carregar";
+  }
 }
 
 // Resumo da Adega no painel do administrador.

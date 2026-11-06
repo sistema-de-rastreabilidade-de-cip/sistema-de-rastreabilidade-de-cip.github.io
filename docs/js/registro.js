@@ -80,6 +80,48 @@ function criarSelectEquipamento(idCampo, label, tipoSeletor, valorAtual, lista) 
   `;
 }
 
+// v8.1 — Operador: lista cadastrada pelo supervisor quando existir.
+// Sem lista (ou com "Outro nome" permitido), mantém o campo livre, como antes.
+// O banco padroniza o nome e recusa nomes vazios/inválidos de qualquer forma.
+const VALOR_OUTRO_OPERADOR = "__outro__";
+function criarCampoOperador(valorAtual) {
+  const ativos = (CIP_OPERADORES || []).filter((o) => o.ativo);
+  const marca = '<span class="marca-obrigatorio" title="Campo obrigatório">*</span>';
+  if (!ativos.length) {
+    return criarInputTopo("nome_operador", "Operador", "text", valorAtual, 'required maxlength="80" autocomplete="off"');
+  }
+  const exigir = !!CIP_CONFIG.exigir_operador_cadastrado;
+  const atualNaLista = valorAtual && ativos.some((o) => cipChaveNome(o.nome) === cipChaveNome(valorAtual));
+  const opcoes = ativos.map((o) => `<option value="${escaparHtml(o.nome)}" ${valorAtual && cipChaveNome(o.nome) === cipChaveNome(valorAtual) ? "selected" : ""}>${escaparHtml(o.nome)}</option>`).join("");
+  const extraAtual = valorAtual && !atualNaLista
+    ? `<option value="${escaparHtml(valorAtual)}" selected>${escaparHtml(valorAtual)} (nome registrado)</option>` : "";
+  return `
+    <div class="campo">
+      <label for="nome_operador_lista">Operador ${marca}</label>
+      <select id="nome_operador_lista" required>
+        <option value="">— selecione —</option>
+        ${extraAtual}${opcoes}
+        ${exigir ? "" : `<option value="${VALOR_OUTRO_OPERADOR}">Outro nome (não cadastrado)…</option>`}
+      </select>
+      <input type="text" id="nome_operador" class="oculto" maxlength="80" autocomplete="off" placeholder="Digite o nome do operador" value="" />
+    </div>
+  `;
+}
+function ligarCampoOperador() {
+  const lista = document.getElementById("nome_operador_lista");
+  if (!lista) return;
+  const texto = document.getElementById("nome_operador");
+  const sincronizar = () => {
+    const outro = lista.value === VALOR_OUTRO_OPERADOR;
+    texto.classList.toggle("oculto", !outro);
+    texto.required = outro;
+    if (!outro) texto.value = lista.value;
+    else if (texto.value === "") texto.focus();
+  };
+  lista.addEventListener("change", () => { if (lista.value === VALOR_OUTRO_OPERADOR) texto.value = ""; sincronizar(); });
+  sincronizar();
+}
+
 function renderizarCamposTopo(valoresIniciais = {}) {
   const container = document.getElementById("campos-topo");
   let html = "";
@@ -114,7 +156,7 @@ function renderizarCamposTopo(valoresIniciais = {}) {
     html += criarInputTopo("hora_final", "Hora Final", "time", valoresIniciais.hora_final, "required");
   }
 
-  html += criarInputTopo("nome_operador", "Operador", "text", valoresIniciais.nome_operador, "required");
+  html += criarCampoOperador(valoresIniciais.nome_operador);
 
   container.innerHTML = html;
 }
@@ -157,7 +199,7 @@ function lerValoresDoFormulario() {
     data_cip: document.getElementById("data_cip").value,
     hora_inicial: document.getElementById("hora_inicial").value || null,
     hora_final: CONFIG.temHoraFinal ? (document.getElementById("hora_final").value || null) : null,
-    nome_operador: document.getElementById("nome_operador").value.trim(),
+    nome_operador: cipNormalizarNome(document.getElementById("nome_operador").value),
     equipamento: CONFIG.equipamento || CONFIG.bbt
       ? document.getElementById("equipamento").value
       : CONFIG.equipamentoFixo,
@@ -188,6 +230,7 @@ function validarCamposObrigatorios(valores) {
   if (!valores.hora_inicial) return "Informe a Hora Inicial.";
   if (CONFIG.temHoraFinal && !valores.hora_final) return "Informe a Hora Final.";
   if (!valores.nome_operador) return "Informe o nome do Operador.";
+  if (!cipNomeValido(valores.nome_operador)) return "Nome do operador inválido: " + CIP_MSG_NOME_INVALIDO;
   return null;
 }
 
@@ -230,7 +273,7 @@ async function init() {
   document.getElementById("info-usuario").textContent =
     `${perfil.nome} (${perfil.role === "administrador" ? "Administrador" : "Operador"})`;
 
-  await cipCarregarConfiguracao();
+  await Promise.all([cipCarregarConfiguracao(), cipCarregarOperadores()]);
   await cipInicializarPagina(perfil);
 
   if (perfil.role !== "operador") {
@@ -268,6 +311,7 @@ async function init() {
     if (!REGISTRO_ATUAL) return;
 
     renderizarCamposTopo(REGISTRO_ATUAL);
+    ligarCampoOperador();
     renderizarCamposDados(REGISTRO_ATUAL.dados || {});
     preencherObservacoes(REGISTRO_ATUAL.observacoes_operador);
 
@@ -276,6 +320,7 @@ async function init() {
   } else {
     // Modo criação
     renderizarCamposTopo({});
+    ligarCampoOperador();
     renderizarCamposDados({});
   }
 
@@ -312,7 +357,12 @@ async function onSubmit(e) {
 
   if (ID_REGISTRO) {
     // ----- Edição: exige autoria + justificativa, e grava histórico -----
-    const nomeQuemEdita = document.getElementById("nome_quem_edita").value.trim();
+    const nomeQuemEdita = cipNormalizarNome(document.getElementById("nome_quem_edita").value);
+    if (nomeQuemEdita && !cipNomeValido(nomeQuemEdita)) {
+      mostrarMensagem("erro", "Nome de quem está fazendo a alteração inválido: " + CIP_MSG_NOME_INVALIDO);
+      pararCarregamento();
+      return;
+    }
     if (!nomeQuemEdita) {
       mostrarMensagem(
         "erro",

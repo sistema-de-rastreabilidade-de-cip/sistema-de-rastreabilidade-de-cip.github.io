@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relatórios — Rastreabilidade de CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="marca-logo" src="assets/logo-heineken-transparente.png" alt="Heineken" />
+      </div>
+      <nav class="navegacao-topo">
+        <a href="painel.html" class="link-nav">Painel</a>
+        <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+        <a href="relatorios.html" class="link-nav so-admin oculto ativo">Relatórios</a>
+        <a href="gestao.html" class="link-nav so-admin oculto">Gestão</a>
+      </nav>
+      <div class="usuario-topo">
+        <span id="info-usuario"></span>
+        <button type="button" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <section class="nao-imprimir">
+      <div class="secao-titulo"><h2>Relatórios de rastreabilidade</h2><span class="selo-area">Área administrativa</span></div>
+      <div class="barra-filtros">
+        <div class="campo-filtro"><label for="r-data-inicio">Data do CIP — de</label><input type="date" id="r-data-inicio" /></div>
+        <div class="campo-filtro"><label for="r-data-fim">até</label><input type="date" id="r-data-fim" /></div>
+        <div class="campo-filtro"><label for="r-operador">Operador</label><select id="r-operador"><option value="">Todos</option></select></div>
+        <div class="campo-filtro"><label for="r-equipamento">Equipamento</label><input type="text" id="r-equipamento" placeholder="Ex.: Tanque de Fermentação 05" /></div>
+        <div class="campo-filtro"><label for="r-tipo">Tipo de CIP</label><select id="r-tipo"><option value="">Todos</option></select></div>
+        <div class="campo-filtro"><label for="r-status">Status da avaliação</label>
+          <select id="r-status"><option value="">Todos</option><option value="aguardando">Aguardando avaliação</option><option value="conforme">Conforme</option><option value="contaminado">Contaminado</option><option value="revisao">Revisão necessária</option></select></div>
+        <div class="botoes" style="margin-top:0;"><button type="button" class="primario" id="btn-gerar-relatorio">Gerar relatório</button></div>
+      </div>
+      <div class="linha-acoes" id="acoes-relatorio" style="margin-top:4px;">
+        <button type="button" class="secundario" id="btn-csv-registros" disabled>Baixar CSV — registros</button>
+        <button type="button" class="secundario" id="btn-csv-historico" disabled>Baixar CSV — histórico</button>
+        <button type="button" class="secundario" id="btn-copiar-tabela" disabled>Copiar tabela para o Excel</button>
+        <button type="button" class="secundario" id="btn-imprimir" disabled>Imprimir / salvar em PDF</button>
+      </div>
+      <p class="sem-dado">O CSV abre direto no Excel. Se o computador não permitir baixar arquivos, use "Copiar tabela para o Excel" e cole na planilha, ou imprima.</p>
+      <div id="mensagem"></div>
+    </section>
+    <section id="area-relatorio"></section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/relatorios.js"></script>
+</body>
+</html>

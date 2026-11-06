@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gestão — Rastreabilidade de CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="marca-logo" src="assets/logo-heineken-transparente.png" alt="Heineken" />
+      </div>
+      <nav class="navegacao-topo">
+        <a href="painel.html" class="link-nav">Painel</a>
+        <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+        <a href="relatorios.html" class="link-nav so-admin oculto">Relatórios</a>
+        <a href="gestao.html" class="link-nav so-admin oculto ativo">Gestão</a>
+      </nav>
+      <div class="usuario-topo">
+        <span id="info-usuario"></span>
+        <button type="button" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <section>
+      <div class="secao-titulo"><h2>Gestão</h2><span class="selo-area">Área administrativa</span></div>
+      <p class="texto-suave" style="margin:-4px 0 0;">Lista de operadores, parâmetros configuráveis e backup dos dados do CIP.</p>
+    </section>
+    <div id="mensagem"></div>
+
+    <section id="secao-operadores-cadastro">
+      <h2 class="secao-titulo">Operadores</h2>
+      <div class="cartao">
+        <p class="texto-suave" style="margin-top:0;">Os operadores cadastrados aparecem como lista no formulário de registro. Cadastros não são apagados: desative quem não deve mais aparecer — o histórico é preservado.</p>
+        <div class="barra-filtros" style="margin-bottom:10px;">
+          <div class="campo-filtro largo"><label for="novo-operador">Nome do operador</label><input type="text" id="novo-operador" maxlength="80" autocomplete="off" placeholder="Ex.: Ana Lima" /></div>
+          <div class="botoes" style="margin-top:0;"><button type="button" class="primario" id="btn-cadastrar-operador">Cadastrar</button></div>
+        </div>
+        <div id="erro-operador"></div>
+        <div id="sugestoes-operadores"></div>
+        <table class="tabela-simples tabela-historico" id="tabela-operadores">
+          <thead><tr><th>Nome</th><th>Situação</th><th>Cadastrado</th><th>Registros</th><th></th></tr></thead>
+          <tbody id="corpo-operadores"><tr><td colspan="5">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="secao-parametros">
+      <h2 class="secao-titulo">Parâmetros</h2>
+      <div class="cartao">
+        <h3 style="margin-top:0;">Lista de operadores obrigatória</h3>
+        <p class="texto-suave">Desligada: o formulário mostra a lista, mas permite digitar outro nome (o nome continua sendo padronizado e validado). Ligada: o banco só aceita nomes da lista de operadores ativos — ligue somente depois de cadastrar todos os operadores.</p>
+        <div class="linha-acoes"><span>Situação atual: <strong id="estado-exigencia">—</strong></span><button type="button" class="secundario" id="btn-alternar-exigencia">—</button></div>
+        <div id="erro-exigencia"></div>
+        <hr style="border:none;border-top:1px solid var(--cor-borda);margin:16px 0;" />
+        <h3>Limite de alerta de espera nas filas</h3>
+        <p class="texto-suave">Opcional. Sem limite, as filas só mostram os tempos de espera. Com limite (em horas), os CIPs que esperam mais que isso são destacados. Defina somente um valor autorizado pela coordenação — o sistema não sugere prazo.</p>
+        <div class="barra-filtros" style="margin:0;">
+          <div class="campo-filtro"><label for="cfg-alerta-horas">Limite (horas, 1 a 720)</label><input type="number" id="cfg-alerta-horas" min="1" max="720" placeholder="sem limite" /></div>
+          <div class="botoes" style="margin-top:0;"><button type="button" class="secundario" id="btn-salvar-alerta">Salvar</button><button type="button" class="secundario" id="btn-remover-alerta">Remover limite</button></div>
+        </div>
+        <div id="erro-alerta"></div>
+      </div>
+    </section>
+
+    <section id="secao-backup">
+      <h2 class="secao-titulo">Backup dos dados do CIP</h2>
+      <div class="cartao">
+        <p class="texto-suave" style="margin-top:0;">O backup guarda, dentro do próprio banco e num espaço protegido, uma cópia completa dos registros, avaliações, históricos, observações, operadores e da Adega, com um código de verificação (SHA-256) por tabela. Não altera nenhum dado. Quando o computador permitir, baixe também o arquivo e guarde fora do sistema.</p>
+        <div class="linha-acoes"><button type="button" class="primario" id="btn-criar-backup">Gerar backup agora</button></div>
+        <div id="resultado-backup"></div>
+        <table class="tabela-simples tabela-historico" style="margin-top:12px;">
+          <thead><tr><th>Nº</th><th>Gerado em</th><th>Por</th><th>Registros</th><th>Código de verificação</th><th></th></tr></thead>
+          <tbody id="corpo-backups"><tr><td colspan="6">Carregando...</td></tr></tbody>
+        </table>
+        <div id="detalhe-backup"></div>
+        <p class="sem-dado" style="margin-top:10px;">Recuperação: é feita pelo responsável técnico no SQL Editor do Supabase, sempre começando por uma simulação, e nunca apaga nem sobrescreve dados (veja <em>documentacao/BACKUP_E_RECUPERACAO.md</em> no repositório).</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/gestao.js"></script>
+</body>
+</html>
