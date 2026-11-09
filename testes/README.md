@@ -13,6 +13,14 @@ migrações reais de `supabase/migrations/` são aplicadas por cima.
 
 ## Como rodar
 
+Tudo de uma vez (resumo no final):
+
+```bash
+SITE_V8_DIR=<pasta docs do main> LEGADO_DIR=<pasta public do site Netlify> bash testes/rodar_tudo.sh
+```
+
+Ou cada suíte:
+
 ```bash
 bash testes/iniciar_postgres.sh               # cria/inicia o Postgres local (porta 54329)
 
@@ -20,7 +28,9 @@ bash testes/iniciar_postgres.sh               # cria/inicia o Postgres local (po
 bash testes/banco/test_v8.sh                   # regressão das regras da v8 (68 verificações)
 bash testes/banco/test_v8_1.sh                 # operadores, nomes, parâmetros, backup e restauração
 bash testes/banco/test_concorrencia.sh         # duas sessões reais avaliando o mesmo CIP
-bash testes/banco/test_rollback.sh             # scripts de desfazer
+bash testes/banco/test_restauracao_historica.sh # restauração exata de dados históricos fora das regras atuais
+bash testes/banco/test_rollback.sh             # desfazer com arquivamento, reaplicação
+bash testes/banco/test_atomicidade.sh          # falha provocada durante a migração/desfazer
 
 # Telas (Playwright)
 bash testes/telas/rodar.sh test_v8_ui.js       # regressão das funções da v8

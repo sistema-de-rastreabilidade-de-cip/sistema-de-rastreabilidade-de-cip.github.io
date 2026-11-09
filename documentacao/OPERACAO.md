@@ -50,8 +50,18 @@ sido avaliado, ele volta para o supervisor como "Revisão necessária".
   disso, o banco só aceita nomes da lista.
 - **Limite de alerta de espera:** opcional, em horas. Defina somente um valor autorizado
   pela coordenação. Sem valor, não há alerta.
-- **Backup:** "Gerar backup agora" → "Verificar" → "Baixar arquivo" quando possível (ver
-  `BACKUP_E_RECUPERACAO.md`).
+- **Backup:** "Gerar backup agora" → "Verificar" → "Baixar arquivo" quando possível. Anote
+  num registro separado o número, a data e o código de verificação de cada backup: o código
+  detecta alterações acidentais, mas não prova sozinho que o arquivo é autêntico (ver
+  `BACKUP_E_RECUPERACAO.md`, seção 3).
+- **Recuperação de dados:** não é feita pelo site. É um procedimento técnico no SQL Editor,
+  sempre ensaiado antes numa réplica local e começando por uma simulação. Ela só acrescenta
+  o que falta: não volta o banco inteiro para o estado do backup (seção 5 do mesmo
+  documento).
+- **Registros antigos com nome fora das regras** (vazio, só números, só símbolos): continuam
+  visíveis com o nome original. Ao editar um registro desses pelo site, o formulário pede
+  um nome válido: escolha o nome correto e justifique. A troca fica no histórico de
+  alterações.
 
 ## Primeiros passos depois de publicar a v8.1
 

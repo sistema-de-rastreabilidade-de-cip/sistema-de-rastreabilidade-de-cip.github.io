@@ -1,17 +1,40 @@
 # Critérios de aceitação — v8.1
 
-Resultado da execução completa em 06/11/2026 (réplica local, dados fictícios):
+Resultado da execução completa em 09/11/2026, após a revisão corretiva (réplica local, dados fictícios,
+`bash testes/rodar_tudo.sh`):
 
 | Suíte | Resultado |
 |-------|-----------|
-| `testes/banco/test_v8.sh` (regressão v8) | 68/68 |
-| `testes/banco/test_v8_1.sh` | 61/61 |
-| `testes/banco/test_concorrencia.sh` | 5/5 |
-| `testes/banco/test_rollback.sh` | 7/7 |
-| `testes/telas/test_v8_ui.js` (regressão v8) | 96/96 |
-| `testes/telas/test_v8_1_ui.js` | 80/80 |
-| `testes/banco/test_restaurar_arquivo.sh` | 10/10 |
-| Site antigo (Netlify) contra o banco v8.1 | 7/7 |
+| `banco/test_v8.sh` (regressão v8) | 68/68 |
+| `banco/test_v8_1.sh` | 61/61 |
+| `banco/test_restauracao_historica.sh` (**novo**) | 30/30 |
+| `banco/test_concorrencia.sh` | 5/5 |
+| `banco/test_rollback.sh` (**ampliado**: arquivamento e reaplicação) | 27/27 |
+| `banco/test_atomicidade.sh` (**novo**) | 17/17 |
+| `telas/test_v8_ui.js` (regressão v8) | 96/96 |
+| `telas/test_v8_1_ui.js` | 80/80 |
+| `banco/test_restaurar_arquivo.sh` | 10/10 |
+| Site v8 (`main`) num banco com a v8.1 desfeita (**novo**) | 96/96 |
+| Site legado (Netlify) contra o banco atual | 7/7 |
+
+## Revisão corretiva (09/11/2026)
+
+| Critério | Teste | Resultado |
+|----------|-------|-----------|
+| Restaura nomes históricos vazios, numéricos, só com símbolos e com espaços **exatamente** | test_restauracao_historica.sh (8 verificações de valores e checksums) | ✔ |
+| Preserva `operador_id`, `alterado_por_nome`, datas e autores originais | idem | ✔ |
+| Novos registros continuam recusando nomes inválidos depois da restauração | idem (5 casos) | ✔ |
+| A exceção não pode ser usada pela sessão da API (marcador ligado, função privilegiada, executar a restauração) | idem (6 casos) | ✔ |
+| Recuperação continua não destrutiva | idem (4 casos) | ✔ |
+| O cenário **falha** com a migração anterior (0bf7c8a) e passa com a corrigida | execução comparativa | ✔ |
+| Desfazer arquiva backups, restaurações, funções, operadores, histórico, vínculos e parâmetros | test_rollback.sh (11 casos) | ✔ |
+| Arquivo protegido, sem acesso pela API, e histórico arquivado imutável | test_rollback.sh | ✔ |
+| Site v8 funciona depois do desfazer | site v8 (main): 96/96 | ✔ |
+| Reaplicar a v8.1 sem conflito; segundo desfazer cria um segundo arquivo; nada perdido | test_rollback.sh (8 casos) | ✔ |
+| Migração atômica: falha no meio ou no fim não deixa nada aplicado, em 4 formas de aplicação | test_atomicidade.sh (8 casos) | ✔ |
+| Desfazer atômico | test_atomicidade.sh (2 casos) | ✔ |
+| Trava contra aplicar duas vezes ou sem a v8 | test_atomicidade.sh (4 casos) | ✔ |
+| Documentação: integridade × autenticidade, aditiva × integral, nomes antigos, ensaio da recuperação, desfazer com arquivamento | BACKUP_E_RECUPERACAO.md, AUDITORIA_SEGURANCA.md, OPERACAO.md, supabase/rollback/LEIAME.md | ✔ (documentado) |
 
 ## 2.1 Identificação dos operadores
 

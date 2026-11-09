@@ -20,14 +20,40 @@
 --     cip_obter_backup, cip_verificar_backup
 --   * schema privado cip_backup (sem acesso pela API): snapshots,
 --     restauracoes, montar_conteudo, validar_arquivo, restaurar
--- Objetos ALTERADOS: nenhum objeto existente tem a definição trocada;
---   só ganham gatilhos novos (cip_registros, cip_edicoes) e colunas novas.
+--   * public.cip_em_restauracao(): identifica a restauração técnica
+-- Objetos ALTERADOS:
+--   * public.cip_registros_validar_insert (gatilho da v8): mesma regra de
+--     antes, mas não interfere numa restauração técnica controlada
+--     (o desfazer devolve a definição original da v8)
+--   * cip_registros e cip_edicoes ganham gatilhos novos; cip_registros e
+--     cip_configuracao ganham colunas novas.
+--
+-- ATOMICIDADE: o arquivo tem BEGIN/COMMIT próprios. Aplicado pelo SQL
+-- Editor do Supabase (colando o arquivo inteiro) ou por
+--   psql -v ON_ERROR_STOP=1 -f <arquivo>
+-- qualquer erro desfaz tudo — nada fica aplicado pela metade. Se o
+-- executor já abrir uma transação, o BEGIN interno só gera um aviso.
+-- Uma trava no início impede aplicar duas vezes.
 --
 -- Compatibilidade: o site anterior continua funcionando — o nome do
 -- operador só passa a ser padronizado (espaços extras removidos) e
 -- recusado quando vazio ou sem letras. A exigência de nome cadastrado
 -- só vale depois que o supervisor ligá-la.
 -- =====================================================================
+
+begin;
+
+do $guarda$
+begin
+  if exists (select 1 from pg_namespace where nspname = 'cip_backup')
+     or to_regclass('public.cip_operadores') is not null then
+    raise exception 'A migração CIP v8.1 já foi aplicada (cip_backup ou cip_operadores já existem). Nada foi alterado.';
+  end if;
+  if to_regclass('public.cip_avaliacoes') is null then
+    raise exception 'A migração CIP v8 precisa ser aplicada antes da v8.1. Nada foi alterado.';
+  end if;
+end
+$guarda$;
 
 -- ---------------------------------------------------------------------
 -- 1. Nomes de pessoas: padronização e validação
@@ -54,6 +80,41 @@ returns boolean language sql immutable set search_path = '' as $$
     and public.cip_normalizar_nome(p_nome) ~ '^[A-Za-zÀ-ÖØ-öø-ÿ .''-]+$'
     and char_length(regexp_replace(public.cip_normalizar_nome(p_nome), '[^A-Za-zÀ-ÖØ-öø-ÿ]', '', 'g')) >= 2,
     false);
+$$;
+
+-- Restauração técnica controlada: verdadeira SOMENTE quando
+--   (1) a função cip_backup.restaurar ligou o marcador da transação e
+--   (2) a sessão NÃO é da API pública. Toda chamada do site chega ao banco
+--       pela sessão "authenticator" (papéis anon/authenticated); o
+--       navegador não consegue mudar isso nem definir o marcador.
+-- Só nessa situação os gatilhos deixam de padronizar/validar, para que
+-- valores históricos voltem exatamente como estavam no backup.
+create or replace function public.cip_em_restauracao()
+returns boolean language sql stable set search_path = '' as $$
+  select coalesce(current_setting('cip.restauracao', true), '') = 'on'
+     and session_user::text not in ('authenticator', 'anon', 'authenticated', 'service_role')
+     and current_user::text not in ('anon', 'authenticated', 'service_role');
+$$;
+
+-- Gatilho de criação da v8 (data futura e BBT do OSAM): mesma regra de
+-- antes; numa restauração técnica, o registro histórico entra como está.
+create or replace function public.cip_registros_validar_insert()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if public.cip_em_restauracao() then
+    return new;
+  end if;
+  if new.tipo_cip = 'osam' then
+    if new.bbt is null or btrim(new.bbt) = '' then
+      raise exception 'Selecione o BBT do CIP OSAM.' using errcode = '23514';
+    end if;
+    new.equipamento := new.bbt;
+  end if;
+  if public.cip_data_futura_bloqueada(new.tipo_cip, new.data_cip) then
+    raise exception 'A data do CIP não pode ser futura.' using errcode = '23514';
+  end if;
+  return new;
+end;
 $$;
 
 -- ---------------------------------------------------------------------
@@ -110,6 +171,10 @@ declare
   v_op public.cip_operadores;
   v_exigir boolean;
 begin
+  -- Restauração técnica: valores históricos (nome e vínculo) ficam intactos.
+  if public.cip_em_restauracao() then
+    return new;
+  end if;
   if tg_op = 'UPDATE' and new.nome_operador is not distinct from old.nome_operador then
     return new;
   end if;
@@ -121,8 +186,7 @@ begin
    where o.nome_chave = public.cip_nome_chave(new.nome_operador)
    order by o.ativo desc limit 1;
   select coalesce(c.exigir_operador_cadastrado, false) into v_exigir from public.cip_configuracao c where c.id = 1;
-  if coalesce(v_exigir, false) and coalesce(current_setting('cip.restauracao', true), '') <> 'on'
-     and (v_op.id is null or not v_op.ativo) then
+  if coalesce(v_exigir, false) and (v_op.id is null or not v_op.ativo) then
     raise exception 'Operador não cadastrado ou inativo: selecione um nome da lista de operadores.' using errcode = '23514';
   end if;
   if v_op.id is not null then
@@ -142,9 +206,12 @@ create trigger trg_cip_registros_operador
 create or replace function public.cip_edicoes_normalizar_autor()
 returns trigger language plpgsql set search_path = '' as $$
 begin
+  -- Restauração técnica: o autor histórico entra exatamente como estava.
+  if public.cip_em_restauracao() then
+    return new;
+  end if;
   new.alterado_por_nome := public.cip_normalizar_nome(new.alterado_por_nome);
-  if coalesce(current_setting('cip.restauracao', true), '') <> 'on'
-     and not public.cip_nome_pessoa_valido(new.alterado_por_nome) then
+  if not public.cip_nome_pessoa_valido(new.alterado_por_nome) then
     raise exception 'Nome de quem está editando inválido: informe o nome (ao menos 2 letras).' using errcode = '23514';
   end if;
   return new;
@@ -381,8 +448,12 @@ begin
   if cardinality(v_erros) = 0 and p_conteudo->>'checksum_total' is distinct from encode(sha256(convert_to(v_concat, 'UTF8')), 'hex') then
     v_erros := array_append(v_erros, 'Checksum total divergente.'::text);
   end if;
+  -- Indicação de ORIGEM: o mesmo código existe entre as cópias guardadas no
+  -- schema protegido? (Integridade não prova autenticidade — ver documentação.)
   return jsonb_build_object('valido', cardinality(v_erros) = 0, 'erros', to_jsonb(v_erros),
-    'gerado_em', p_conteudo->'gerado_em', 'contagens', p_conteudo->'contagens', 'checksum_total', p_conteudo->'checksum_total');
+    'gerado_em', p_conteudo->'gerado_em', 'contagens', p_conteudo->'contagens', 'checksum_total', p_conteudo->'checksum_total',
+    'snapshot_correspondente', (select s.id from cip_backup.snapshots s
+                                 where s.checksum_total = p_conteudo->>'checksum_total' order by s.id limit 1));
 end;
 $$;
 
@@ -405,9 +476,15 @@ declare
   v_seq text;
   v_cols text;
 begin
+  -- Nunca pela API pública (defesa extra: a função já não tem permissão de execução para ela).
+  if session_user::text in ('authenticator', 'anon', 'authenticated', 'service_role')
+     or current_user::text in ('anon', 'authenticated', 'service_role') then
+    raise exception 'A restauração só pode ser executada pelo responsável técnico no SQL Editor.' using errcode = '42501';
+  end if;
   if not (v_validacao->>'valido')::boolean then
     raise exception 'Arquivo de backup inválido: %', v_validacao->'erros' using errcode = '22023';
   end if;
+  -- Marcador local da transação: só vale até o fim desta restauração.
   perform set_config('cip.restauracao', 'on', true);
 
   for t in select * from cip_backup.tabelas() order by ordem loop
@@ -471,8 +548,11 @@ begin
       'chaves_divergentes', v_div_chaves));
   end loop;
 
-  v_rel := jsonb_build_object('simulacao', p_simular, 'checksum_total', p_conteudo->>'checksum_total',
-                              'gerado_em', p_conteudo->'gerado_em', 'tabelas', v_rel);
+  perform set_config('cip.restauracao', 'off', true);
+  v_rel := jsonb_build_object('modo', 'aditiva', 'simulacao', p_simular, 'checksum_total', p_conteudo->>'checksum_total',
+                              'gerado_em', p_conteudo->'gerado_em',
+                              'snapshot_correspondente', v_validacao->'snapshot_correspondente',
+                              'tabelas', v_rel);
   if not p_simular then
     insert into cip_backup.restauracoes (checksum_total, relatorio) values (p_conteudo->>'checksum_total', v_rel);
   end if;
@@ -591,3 +671,5 @@ revoke all on function public.cip_nome_pessoa_valido(text) from anon;
 
 comment on table public.cip_operadores is 'CIP v8.1: lista de operadores mantida pelo supervisor (desativar em vez de apagar).';
 comment on table public.cip_operadores_historico is 'CIP v8.1: histórico imutável do cadastro de operadores.';
+
+commit;
