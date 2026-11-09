@@ -77,7 +77,8 @@ function relCamposProcedimento(registros) {
   const vistos = new Map();
   Object.keys(FORM_CONFIG).forEach((tipo) => {
     if (!registros.some((r) => r.tipo_cip === tipo)) return;
-    FORM_CONFIG[tipo].campos.forEach((c) => { if (!vistos.has(c.key)) vistos.set(c.key, c.label); });
+    const prefixo = FORM_CONFIG[tipo].prefixoRelatorio;
+    FORM_CONFIG[tipo].campos.forEach((c) => { if (!vistos.has(c.key)) vistos.set(c.key, prefixo ? `${prefixo} — ${c.label}` : c.label); });
   });
   return [...vistos.entries()];
 }

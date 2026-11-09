@@ -168,10 +168,16 @@ async function carregarProximaPagina() {
 function renderizarCamposDados(tipoCip, dados) {
   const config = FORM_CONFIG[tipoCip];
   if (!config) return "";
+  let secaoAtual = null;
   return config.campos
     .map((campo) => {
       const valor = dados && dados[campo.key] ? dados[campo.key] : "—";
-      return `<div class="campo-dado"><span>${escaparHtml(campo.label)}</span><span class="valor">${escaparHtml(valor)}</span></div>`;
+      let titulo = "";
+      if (campo.secao && campo.secao !== secaoAtual) {
+        secaoAtual = campo.secao;
+        titulo = `<div class="secao-detalhe">${escaparHtml(campo.secao)}</div>`;
+      }
+      return `${titulo}<div class="campo-dado"><span>${escaparHtml(campo.label)}</span><span class="valor">${escaparHtml(valor)}</span></div>`;
     })
     .join("");
 }

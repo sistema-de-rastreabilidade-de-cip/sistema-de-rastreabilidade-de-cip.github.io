@@ -70,6 +70,8 @@ const CIP_CORES_TIPO = {
   tanque_levedura: "#8a5a12",
   linha_recuperacao_levedura: "#2a4b57",
   osam: "#5b5796",
+  filtracao_filtro3: "#7a5a2e",
+  filtracao_bmf: "#2f6f8f",
 };
 function cipRotuloTipo(tipo) { return (typeof TIPO_CIP_LABELS !== "undefined" && TIPO_CIP_LABELS[tipo]) || tipo; }
 // Nos registros OSAM o "equipamento" é o BBT.

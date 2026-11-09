@@ -83,6 +83,20 @@ Migração: `supabase/migrations/20261107120000_cip_v8_1_operadores_backup.sql`,
 desfazer em `supabase/rollback/`. Testes e critérios: `testes/README.md` e
 `documentacao/CRITERIOS_DE_ACEITACAO.md`.
 
+## Novidades da v9 (em desenvolvimento)
+
+- **CIP Filtração — Filtro 3** (PO-JAC-FAB-005, Anexo 2) e **CIP Filtração — BMF**
+  (PO-JAC-FAB-024, Anexo 3): dois formulários novos e separados, com os campos e os
+  equipamentos de cada documento (grupos BMF, Filtro 03 e Blendagem). Estão integrados ao
+  registro, histórico, edição, avaliação, painel, relatórios, exportação e backup.
+- As faixas do Anexo 3 são só referência: o sistema não bloqueia valores fora delas.
+- As divergências entre os documentos foram mantidas como estão e as planilhas ainda
+  precisam ser conferidas: ver `documentacao/FORMULARIOS_FILTRACAO.md`.
+
+Migrações: `supabase/migrations/20261109120000_cip_v9_tipos_filtracao.sql` e
+`20261109120100_cip_v9_regras_filtracao.sql`, aplicadas nessa ordem e em execuções
+separadas. Desfazer em `supabase/rollback/`.
+
 ## Atualizar
 
 Cada mudança no `main` que toque a pasta `docs/` é publicada sozinha em 1 a 2 minutos.

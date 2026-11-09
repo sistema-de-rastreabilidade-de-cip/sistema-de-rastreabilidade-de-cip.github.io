@@ -6,8 +6,11 @@ qualquer um, gere um backup (Gestão) e ensaie numa réplica local
 
 | Script | Desfaz | O que acontece com os dados |
 |--------|--------|-----------------------------|
+| `20261109120100_cip_v9_desfazer.sql` | v9 (Filtração) | **Nada é apagado.** Só tira os dois tipos de Filtração da regra de data futura. Os registros de Filtração continuam no banco, nos históricos e nos backups. Os valores do tipo de CIP ficam (o PostgreSQL não remove valores de enum), mas sem uso não afetam nada. O site anterior mostra esses registros só com o código do tipo. |
 | `20261107120000_cip_v8_1_operadores_backup_desfazer.sql` | v8.1 | **Nada é apagado.** O schema `cip_backup` é renomeado para `cip_arquivo_v8_1_AAAAMMDD_HHMMSS` (horário de São Paulo), com os backups guardados, o log de restaurações e as funções históricas. `cip_operadores` e `cip_operadores_historico` são movidos para esse arquivo. Os vínculos registro→operador e os parâmetros da v8.1 viram as tabelas `registros_operador` e `configuracao_v8_1` no arquivo. Tudo fica sem acesso pela API. |
 | `20261106120100_cip_v8_estrutura_desfazer.sql` | v8 | Remove avaliações, datas-base e registros OSAM (exporte-os antes). Devolve `editar_registro_cip` à versão anterior. |
+
+Se for preciso desfazer mais de uma versão, desfaça da mais nova para a mais antiga (v9, depois v8.1). Para voltar o site, reverta o merge no `main`.
 
 ## Funcionamento do desfazer da v8.1
 

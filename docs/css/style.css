@@ -1501,3 +1501,9 @@ main.conteudo > #mensagem:empty, section > #mensagem:empty { display: none; }
   main.conteudo { padding: 0; max-width: none; }
   .relatorio-registro { border-color: #999; }
 }
+
+/* ===================== CIP v9 — formulários com seções ===================== */
+.form-grid > .secao-formulario { grid-column: 1 / -1; margin: 14px 0 0; padding-top: 10px; border-top: 1px solid var(--cor-borda); font-size: 0.86rem; font-weight: 600; color: var(--cor-primaria); }
+.form-grid > .secao-formulario:first-child, .form-grid > .nota-formulario + .secao-formulario { border-top: none; padding-top: 0; margin-top: 0; }
+.form-grid > .nota-formulario { grid-column: 1 / -1; margin: 0; background: var(--cor-fundo-secao); border-radius: var(--raio-pequeno); padding: 8px 12px; font-size: 0.8rem; color: var(--cor-texto-suave); }
+.secao-detalhe { margin: 10px 0 2px; font-size: 0.8rem; font-weight: 600; color: var(--cor-primaria); }

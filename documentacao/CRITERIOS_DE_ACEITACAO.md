@@ -1,21 +1,51 @@
-# Critérios de aceitação — v8.1
+# Critérios de aceitação — v8.1 e v9
 
-Resultado da execução completa em 09/11/2026, após a revisão corretiva (réplica local, dados fictícios,
-`bash testes/rodar_tudo.sh`):
+Resultado da execução completa em 09/11/2026, com a revisão corretiva da v8.1 e a v9 (réplica
+local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verificações, nenhuma falha.**
 
 | Suíte | Resultado |
 |-------|-----------|
 | `banco/test_v8.sh` (regressão v8) | 68/68 |
 | `banco/test_v8_1.sh` | 61/61 |
-| `banco/test_restauracao_historica.sh` (**novo**) | 30/30 |
+| `banco/test_restauracao_historica.sh` | 30/30 |
 | `banco/test_concorrencia.sh` | 5/5 |
-| `banco/test_rollback.sh` (**ampliado**: arquivamento e reaplicação) | 27/27 |
-| `banco/test_atomicidade.sh` (**novo**) | 17/17 |
-| `telas/test_v8_ui.js` (regressão v8) | 96/96 |
-| `telas/test_v8_1_ui.js` | 80/80 |
+| `banco/test_rollback.sh` (arquivamento e reaplicação) | 27/27 |
+| `banco/test_atomicidade.sh` | 17/17 |
+| `banco/test_v9.sh` (**novo**, Filtração) | 19/19 |
+| `telas/test_v8_ui.js` (regressão v8, agora com 7 formulários) | 96/96 |
+| `telas/test_v8_1_ui.js` (inclui os 5 formulários existentes e OSAM BBT 01–12) | 80/80 |
 | `banco/test_restaurar_arquivo.sh` | 10/10 |
-| Site v8 (`main`) num banco com a v8.1 desfeita (**novo**) | 96/96 |
+| `telas/test_v9_filtracao_ui.js` (**novo**) | 58/58 |
+| Site v8 (`main`) num banco com v8.1 + v9 aplicadas (**novo**) | 96/96 |
+| Site v8 (`main`) num banco com a v8.1 desfeita | 96/96 |
 | Site legado (Netlify) contra o banco atual | 7/7 |
+
+## v9 — CIP Filtração (Filtro 3 e BMF)
+
+> Montado a partir da lista de campos da solicitação. **Pendente de conferência com as planilhas
+> dos Anexos 2 e 3** (não recebidas). Detalhes em `FORMULARIOS_FILTRACAO.md`.
+
+| Critério | Teste | Resultado |
+|----------|-------|-----------|
+| Os dois formulários aparecem no menu do operador e abrem | UI | ✔ |
+| Filtro 3: os 21 campos oficiais presentes (conferência pelo rótulo) | UI | ✔ |
+| BMF: os 30 campos oficiais presentes | UI | ✔ |
+| Nenhum campo de um procedimento no outro (formulário, relatório e CSV) | UI (4 casos) | ✔ |
+| Equipamentos em grupos (Grupo BMF 13, Filtro 03 10, Blendagem 7) com a grafia de cada documento (BVPP × BPVPP, FBL filtrada × não filtrada) | UI (4 casos) | ✔ |
+| Soaking só SIM/NÃO; faixas só informativas, valor fora da faixa aceito | UI; test_v9.sh | ✔ |
+| Gravação de todos os campos (15 e 24 chaves, todas preenchidas) e persistência depois de recarregar | UI (5 casos) | ✔ |
+| Edição com justificativa; diferença do campo no histórico | UI | ✔ |
+| Avaliação, observação, revisão necessária e reavaliação | UI (5 casos); test_v9.sh | ✔ |
+| Permissões: só o operador grava; só o supervisor avalia | UI (2 casos); test_v9.sh | ✔ |
+| Data futura e nome inválido recusados também nos novos tipos | UI; test_v9.sh (3 casos) | ✔ |
+| Filtros por tipo, equipamento e operador; gráficos e filtro do painel | UI (5 casos) | ✔ |
+| Relatório, CSV de registros e de histórico, cópia para o Excel e PDF, com colunas "Filtro 3 — …"/"BMF — …" separadas | UI (7 casos) | ✔ |
+| Backup com todos os campos; restauração idêntica num banco vazio | UI; test_v9.sh | ✔ |
+| Sem rolagem horizontal em 1366, 1024, 768 e 390 px (formulários e detalhe) | UI (12 casos) | ✔ |
+| Os 5 tipos existentes continuam gravando; OSAM com BBT 01–12 | test_v8_ui.js; test_v8_1_ui.js; test_v8.sh | ✔ |
+| Migrações atômicas, com guarda de ordem, idempotentes; desfazer sem apagar registros e reaplicável | test_v9.sh (7 casos) | ✔ |
+| Site atual (v8) segue funcionando com as migrações v9 aplicadas | site v8 num banco v8.1 + v9: 96/96 | ✔ |
+| FTR intocado | test_v9.sh | ✔ |
 
 ## Revisão corretiva (09/11/2026)
 
@@ -97,7 +127,7 @@ test_v8_1.sh. Chave pública: varredura do repositório sem chaves secretas.
 
 | Regra | Evidência |
 |-------|-----------|
-| Campos oficiais, unidades, equipamentos e listas preservados | Nenhuma alteração em `formConfig.js`/`equipamentos.js` na v8.1 |
+| Campos oficiais, unidades, equipamentos e listas preservados | Nenhuma alteração nos 5 formulários existentes; a v9 só acrescenta os dois de Filtração |
 | Sem limites de processo inventados | Nenhum limite de concentração, temperatura, pressão ou duração no código |
 | OSAM com BBT 01–12 | test_v8.sh; UI "OSAM continua com BBT da lista fixa" |
 | Regras de avaliação/revisão da v8 | test_v8.sh e test_v8_ui.js sem falhas |

@@ -61,14 +61,24 @@ function listaParaSeletorPrincipal(tipoSeletor, valorAtual) {
 }
 
 function criarSelectEquipamento(idCampo, label, tipoSeletor, valorAtual, lista) {
-  const opcoes = (lista || listaEquipamentosParaCampo(tipoSeletor))
-    .filter(Boolean)
-    .map((item) => {
-      const nome = nomeExibicaoEquipamento(item);
-      const selecionado = nome === valorAtual ? "selected" : "";
-      return `<option value="${escaparHtml(nome)}" ${selecionado}>${escaparHtml(nome)}</option>`;
-    })
-    .join("");
+  const itens = (lista || listaEquipamentosParaCampo(tipoSeletor)).filter(Boolean);
+  const opcao = (item) => {
+    const nome = nomeExibicaoEquipamento(item);
+    const selecionado = nome === valorAtual ? "selected" : "";
+    return `<option value="${escaparHtml(nome)}" ${selecionado}>${escaparHtml(nome)}</option>`;
+  };
+  let opcoes;
+  if (itens.some((i) => i.grupo)) {
+    // v9: listas da Filtração agrupadas como no documento (Grupo BMF, Filtro 03, Blendagem)
+    const grupos = [...new Set(itens.map((i) => i.grupo))];
+    opcoes = grupos.map((g) => `<optgroup label="${escaparHtml(g)}">${itens.filter((i) => i.grupo === g).map(opcao).join("")}</optgroup>`).join("");
+  } else {
+    opcoes = itens.map(opcao).join("");
+  }
+  if (valorAtual && !itens.some((i) => nomeExibicaoEquipamento(i) === valorAtual) && !(ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorAtual))) {
+    // registro antigo com valor fora da lista atual: mantém o valor gravado
+    opcoes = `<option value="${escaparHtml(valorAtual)}" selected>${escaparHtml(valorAtual)} (valor registrado)</option>` + opcoes;
+  }
   return `
     <div class="campo">
       <label for="${idCampo}">${escaparHtml(label)} <span class="marca-obrigatorio" title="Campo obrigatório">*</span></label>
@@ -165,11 +175,31 @@ function renderizarCamposDados(dadosIniciais = {}) {
   const container = document.getElementById("campos-dados");
   let html = "";
 
+  if (CONFIG.nota) {
+    html += `<p class="nota-formulario">${escaparHtml(CONFIG.nota)}</p>`;
+  }
+  let secaoAtual = null;
   CONFIG.campos.forEach((campo) => {
     const idCampo = `campo_${campo.key}`;
     const valor = dadosIniciais[campo.key];
 
-    if (campo.tipo === "hora") {
+    // v9: seções opcionais (só os formulários que as definem)
+    if (campo.secao && campo.secao !== secaoAtual) {
+      secaoAtual = campo.secao;
+      html += `<h3 class="secao-formulario">${escaparHtml(campo.secao)}</h3>`;
+    }
+
+    if (campo.tipo === "opcoes") {
+      html += `
+        <div class="campo">
+          <label for="${idCampo}">${escaparHtml(campo.label)}</label>
+          <select id="${idCampo}">
+            <option value="">— selecione —</option>
+            ${campo.opcoes.map((o) => `<option value="${escaparHtml(o)}" ${valor === o ? "selected" : ""}>${escaparHtml(o)}</option>`).join("")}
+          </select>
+        </div>
+      `;
+    } else if (campo.tipo === "hora") {
       html += criarInputTopo(idCampo, campo.label, "time", valor);
     } else if (campo.tipo === "equipamento") {
       html += criarSelectEquipamento(idCampo, campo.label, campo.tipoSeletor, valor);

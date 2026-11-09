@@ -14,6 +14,7 @@ rodar "banco/test_restauracao_historica.sh" bash banco/test_restauracao_historic
 rodar "banco/test_concorrencia.sh"          bash banco/test_concorrencia.sh
 rodar "banco/test_rollback.sh"              bash banco/test_rollback.sh
 rodar "banco/test_atomicidade.sh"           bash banco/test_atomicidade.sh
+rodar "banco/test_v9.sh"                    bash banco/test_v9.sh
 rodar "telas/test_v8_ui.js"                 bash telas/rodar.sh test_v8_ui.js
 rodar "telas/test_v8_1_ui.js"               bash telas/rodar.sh test_v8_1_ui.js
 rodar "banco/test_restaurar_arquivo.sh"     bash banco/test_restaurar_arquivo.sh
@@ -21,6 +22,7 @@ for extra in telas/test_v9_filtracao_ui.js; do
   [ -f "$extra" ] && rodar "$extra" bash telas/rodar.sh "$(basename "$extra")"
 done
 if [ -n "$SITE_V8_DIR" ]; then
+  rodar "site v8 (main) num banco com v8.1 + v9 aplicadas (migrações antes do site)" env DOCS_DIR="$SITE_V8_DIR" bash telas/rodar.sh test_v8_ui.js
   rodar "site v8 (main) num banco com a v8.1 desfeita" env DOCS_DIR="$SITE_V8_DIR" APOS_SQL="$REPO_DIR/supabase/rollback/20261107120000_cip_v8_1_operadores_backup_desfazer.sql" bash telas/rodar.sh test_v8_ui.js
 fi
 if [ -n "$LEGADO_DIR" ]; then

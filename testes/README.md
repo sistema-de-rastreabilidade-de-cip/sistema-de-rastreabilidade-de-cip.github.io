@@ -31,11 +31,13 @@ bash testes/banco/test_concorrencia.sh         # duas sessões reais avaliando o
 bash testes/banco/test_restauracao_historica.sh # restauração exata de dados históricos fora das regras atuais
 bash testes/banco/test_rollback.sh             # desfazer com arquivamento, reaplicação
 bash testes/banco/test_atomicidade.sh          # falha provocada durante a migração/desfazer
+bash testes/banco/test_v9.sh                   # tipos de Filtração: guardas, regras, permissões, backup, desfazer
 
 # Telas (Playwright)
 bash testes/telas/rodar.sh test_v8_ui.js       # regressão das funções da v8
 bash testes/telas/rodar.sh test_v8_1_ui.js     # funções da v8.1 (gera o arquivo de backup baixado)
 bash testes/banco/test_restaurar_arquivo.sh    # restaura o arquivo baixado pela tela num banco vazio
+bash testes/telas/rodar.sh test_v9_filtracao_ui.js # formulários Filtro 3 e BMF (todos os campos, fluxo completo, 4 larguras)
 ```
 
 Nos testes de tela, a CDN do supabase-js e do Chart.js é substituída por `telas/fake_supabase.js`

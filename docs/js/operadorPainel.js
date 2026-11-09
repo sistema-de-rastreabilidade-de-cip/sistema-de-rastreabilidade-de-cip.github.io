@@ -55,6 +55,8 @@ const OP_CORES_TIPO = {
   tanque_levedura: "#8a5a12",
   linha_recuperacao_levedura: "#2a4b57",
   osam: "#5b5796",
+  filtracao_filtro3: "#7a5a2e",
+  filtracao_bmf: "#2f6f8f",
 };
 
 const OP_ICONE = {
@@ -65,6 +67,7 @@ const OP_ICONE = {
   doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3h16v18H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   gota: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8 6 5 10 5 14a7 7 0 0014 0c0-4-3-8-7-12z"/></svg>',
   linhas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>',
+  filtro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg>',
   tanque: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h10v4a5 5 0 01-1 3v9a2 2 0 01-2 2h-4a2 2 0 01-2-2v-9a5 5 0 01-1-3z"/><path d="M8 13h8"/></svg>',
 };
 
@@ -290,7 +293,7 @@ function opMontarCartoesFormularios() {
   const container = document.getElementById("op-cartoes-formularios");
   container.innerHTML = Object.entries(FORM_CONFIG)
     .map(([tipo, cfg]) => {
-      const icone = tipo === "tanque_levedura" ? OP_ICONE.gota : tipo === "linha_recuperacao_levedura" ? OP_ICONE.linhas : tipo === "osam" ? OP_ICONE.tanque : OP_ICONE.doc;
+      const icone = tipo === "tanque_levedura" ? OP_ICONE.gota : tipo === "linha_recuperacao_levedura" ? OP_ICONE.linhas : tipo === "osam" ? OP_ICONE.tanque : tipo.startsWith("filtracao_") ? OP_ICONE.filtro : OP_ICONE.doc;
       return `
         <a class="cartao-formulario" href="registro.html?tipo=${encodeURIComponent(tipo)}">
           <div class="icone-forms"${tipo === "osam" ? ' style="background:#5b5796"' : ""}>${icone}</div>
