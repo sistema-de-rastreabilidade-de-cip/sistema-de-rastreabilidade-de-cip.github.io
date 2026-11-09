@@ -22,8 +22,11 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 
 ## v9 — CIP Filtração (Filtro 3 e BMF)
 
-> Montado a partir da lista de campos da solicitação. **Pendente de conferência com as planilhas
-> dos Anexos 2 e 3** (não recebidas). Detalhes em `FORMULARIOS_FILTRACAO.md`.
+> Montado a partir da descrição escrita na solicitação. As planilhas dos Anexos 2 e 3 chegaram em
+> 09/11/2026. Na conferência, os 21 e os 30 campos conferem, mas há diferenças de grafia nos
+> equipamentos **ainda não corrigidas**, por isso os formulários seguem **pendentes de validação
+> final**. Os testes abaixo valem para a versão atual, montada pela descrição escrita. Detalhes em
+> `FORMULARIOS_FILTRACAO.md`, seção "Conferência com as planilhas originais".
 
 | Critério | Teste | Resultado |
 |----------|-------|-----------|
@@ -32,6 +35,8 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 | BMF: os 30 campos oficiais presentes | UI | ✔ |
 | Nenhum campo de um procedimento no outro (formulário, relatório e CSV) | UI (4 casos) | ✔ |
 | Equipamentos em grupos (Grupo BMF 13, Filtro 03 10, Blendagem 7) com a grafia de cada documento (BVPP × BPVPP, FBL filtrada × não filtrada) | UI (4 casos) | ✔ |
+| Grafia dos equipamentos idêntica às planilhas originais | conferência de 09/11/2026 | **Pendente**: 6 diferenças a decidir (Lúpulo 1 e 2 sem "- Sol Premium"/"- Pilsen", "à Filtrar", "Degas", "BMF" × "Grupo BMF", maiúscula em "aldox") |
+| Os 21 e 30 campos e a ordem conferem com as planilhas originais | conferência de 09/11/2026 | ✔ |
 | Soaking só SIM/NÃO; faixas só informativas, valor fora da faixa aceito | UI; test_v9.sh | ✔ |
 | Gravação de todos os campos (15 e 24 chaves, todas preenchidas) e persistência depois de recarregar | UI (5 casos) | ✔ |
 | Edição com justificativa; diferença do campo no histórico | UI | ✔ |
@@ -127,10 +132,16 @@ test_v8_1.sh. Chave pública: varredura do repositório sem chaves secretas.
 
 | Regra | Evidência |
 |-------|-----------|
-| Campos oficiais, unidades, equipamentos e listas preservados | Nenhuma alteração nos 5 formulários existentes; a v9 só acrescenta os dois de Filtração |
+| Campos oficiais, unidades, equipamentos e listas preservados | Nenhuma alteração nos 5 formulários existentes; a v9 acrescenta os dois de Filtração (7 no total) |
 | Sem limites de processo inventados | Nenhum limite de concentração, temperatura, pressão ou duração no código |
 | OSAM com BBT 01–12 | test_v8.sh; UI "OSAM continua com BBT da lista fixa" |
 | Regras de avaliação/revisão da v8 | test_v8.sh e test_v8_ui.js sem falhas |
 | Intervalos da Adega inalterados | `adega_procedimentos` não é alterado pela migração |
 | Nenhum registro histórico excluído | migração só aditiva; test_rollback.sh |
-| FTR intocado | test_v8_1.sh "tabelas do FTR inalteradas", "backup não inclui tabelas do FTR" |
+| FTR (FTR Beer Production) intocado | test_v8_1.sh "tabelas do FTR inalteradas", "backup não inclui tabelas do FTR"; test_v9.sh |
+| Contas compartilhadas mantidas, sem contas novas | nenhuma conta criada ou alterada |
+| Lista obrigatória de operadores desligada por padrão | test_v8_1.sh |
+| Limite de alerta de espera sem valor por padrão | test_v8_1.sh |
+| Backup com SHA-256 de integridade, sem alegar autenticidade | BACKUP_E_RECUPERACAO.md, seção 3 |
+| Recuperação aditiva, sem sobrescrever nem apagar | test_v8_1.sh; test_restauracao_historica.sh |
+| Nada publicado nem aplicado em produção | `main` em `340f64e`; migrações v8.1 e v9 só na réplica local |

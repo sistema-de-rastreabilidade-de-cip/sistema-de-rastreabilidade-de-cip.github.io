@@ -1,4 +1,8 @@
-# Backup e recuperação dos dados do CIP (v8.1)
+# Backup e recuperação dos dados do CIP (v8.1 e v9)
+
+> A v8.1 e a v9 estão em desenvolvimento na branch `feature/cip-v8-1`: não estão publicadas e
+> as migrações não foram aplicadas em produção. O FTR Beer Production (`painel_*`), que usa o
+> mesmo projeto Supabase, não entra no backup e não é alterado.
 
 ## 1. O que entra no backup
 
@@ -11,7 +15,7 @@ Todas as tabelas do CIP, em ordem de dependência. As tabelas do Painel FTR **n�
 | 3 | `adega_procedimentos` | periodicidades da Adega A e B |
 | 4 | `cip_operadores` | lista de operadores |
 | 5 | `cip_operadores_historico` | cadastros, desativações e reativações |
-| 6 | `cip_registros` | registros de CIP de todos os tipos (inclusive OSAM/BBT e tipos futuros) |
+| 6 | `cip_registros` | registros dos sete tipos de CIP, inclusive OSAM (BBT 01 a BBT 12) e os dois de Filtração (v9), com todos os campos do procedimento em `dados` |
 | 7 | `cip_edicoes` | histórico de edições (antes/depois, justificativa, autor) |
 | 8 | `cip_observacoes` | observações administrativas |
 | 9 | `cip_avaliacoes` | situação atual de cada avaliação |
@@ -98,6 +102,11 @@ automático exigiria ativar a extensão `pg_cron` (configuração do projeto, n�
 
 Serve para recuperar dados perdidos (registros apagados, tabela esvaziada, banco novo) sem
 risco de destruir o que existe.
+
+**Backups com registros de Filtração (v9):** o banco de destino precisa ter a migração
+`20261109120000_cip_v9_tipos_filtracao.sql`. Sem ela, a recuperação é recusada com
+"invalid input value for enum" e nada é gravado (testado: o banco ficou com as mesmas
+contagens). Desfazer a v9 não impede a recuperação, porque os tipos de CIP continuam no banco.
 
 **O que o sistema NÃO faz — restauração INTEGRAL:** voltar o banco inteiro para o estado
 exato do backup, desfazendo o que mudou depois. Isso exigiria apagar ou sobrescrever dados

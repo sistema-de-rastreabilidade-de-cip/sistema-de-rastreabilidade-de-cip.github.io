@@ -1,8 +1,9 @@
-# Auditoria de segurança — Sistema de Rastreabilidade de CIP (v8 → v8.1)
+# Auditoria de segurança — Sistema de Rastreabilidade de CIP (v8 → v8.1 → v9)
 
 Data: 06/11/2026. Base: leitura do banco de produção (somente consultas, nada alterado),
 do código em `docs/` e das migrações em `supabase/migrations/`. As correções propostas
-foram implementadas na branch `feature/cip-v8-1` e testadas numa réplica local.
+foram implementadas na branch `feature/cip-v8-1` e testadas numa réplica local. A v8.1 e a v9
+não estão publicadas e as migrações não foram aplicadas em produção.
 
 ## Arquitetura de segurança
 
@@ -52,6 +53,26 @@ foram implementadas na branch `feature/cip-v8-1` e testadas numa réplica local.
   do supervisor (`cip_criar_backup`, `cip_listar_backups`, `cip_obter_backup`,
   `cip_verificar_backup`) ou pelo dono do banco no SQL Editor (`cip_backup.restaurar`).
 - Restauração **não destrutiva**: nunca atualiza nem apaga; linhas divergentes só são relatadas.
+
+## O que a v9 (Filtração) muda em segurança
+
+- Nada novo em permissões: os dois tipos de Filtração usam as mesmas tabelas, RLS, funções e
+  regras dos outros tipos. Só o operador grava; só o supervisor avalia (test_v9.sh e testes de
+  tela).
+- As migrações só acrescentam dois valores ao tipo de CIP e incluem os dois tipos na regra de
+  data futura. Nenhuma tabela, função, privilégio ou conta é criada, e nada do FTR é tocado.
+- O item 15 vale também para os novos tipos: o banco não confere o equipamento nem as chaves de
+  `dados` contra as listas oficiais (risco residual baixo, exige a senha da conta de operador).
+- Não há limites operacionais no banco: as faixas do Anexo 3 são só texto informativo.
+
+## Configuração padrão confirmada
+
+- Duas contas compartilhadas (operador e administrador), sem contas novas.
+- Lista obrigatória de operadores desligada.
+- Limite de alerta de espera sem valor.
+- Backups com SHA-256 de integridade; isso não comprova autenticidade (ver
+  `BACKUP_E_RECUPERACAO.md`, seção 3).
+- Recuperação aditiva: nunca sobrescreve nem apaga registros.
 
 ## Pendências que dependem de autorização
 

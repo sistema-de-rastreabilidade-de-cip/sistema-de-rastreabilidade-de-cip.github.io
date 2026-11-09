@@ -1,9 +1,11 @@
 # CIP Filtração — Filtro 3 e BMF (v9)
 
-> **PENDENTE DE CONFERÊNCIA com as planilhas.** Os arquivos `Anexo 2 CIP Filtração - Filtro 3.xlsx`
-> e `Anexo 3 CIP Filtracao BMF.xlsx` não foram recebidos. Os dois formulários foram montados a partir
-> da lista de campos e equipamentos escrita na solicitação. Antes de publicar, os campos, a grafia e
-> as listas abaixo precisam ser conferidos com as planilhas.
+> **PENDENTE DE VALIDAÇÃO FINAL.** Os dois formulários foram montados a partir da descrição escrita
+> na solicitação, antes de as planilhas originais chegarem. Os arquivos `Anexo 2 CIP Filtração - Filtro 3.xlsx`
+> e `Anexo 3 CIP Filtracao BMF.xlsx` foram enviados em 09/11/2026 e a conferência está na seção
+> "Conferência com as planilhas originais". Os campos e a ordem conferem. Há diferenças de grafia nos
+> equipamentos que **ainda não foram corrigidas no sistema** e aguardam decisão. A v9 não está
+> publicada e as migrações não foram aplicadas em produção.
 
 ## Como funciona
 
@@ -104,7 +106,7 @@ Os dois formulários mostram três grupos: **Grupo BMF**, **Filtro 03** e **Blen
 | Linha de Blendagem — BBLENDAGEM | igual |
 | Linha **de** Adega — BADEGA | Linha **até** Adega — BADEGA |
 
-**Filtro 03:** Tanque de Cerveja a Filtrar (PCM), Filtro de Cerveja por placas (F03), Tanque de
+**Filtro 03** (grafia atual do sistema; ver a conferência abaixo): Tanque de Cerveja a Filtrar (PCM), Filtro de Cerveja por placas (F03), Tanque de
 Cerveja Filtrada (PCF), Tanque de Sílica, Tanque de PVPP, Tanque de Alginato, Tanque de Antioxidante
 (TA), Tanque de Lúpulo 1, Tanque de Lúpulo 2, Linha de Blendagem (LBLEND).
 
@@ -122,19 +124,49 @@ Adega de água de Diluição D, Tanque de água nobre sala 01 (TQN 25 - 1), Tanq
 3. **"Linha de Adega" × "Linha até Adega"** e **"Membrana" × "de Membrana"**: diferenças pequenas de
    redação, também mantidas.
 
-## Suposições a confirmar com as planilhas
+## Conferência com as planilhas originais (09/11/2026)
 
-- **Filtro 03 e Blendagem no BMF:** foi usada a mesma relação do Anexo 2.
-- **Tipo dos campos:** todos os campos do procedimento são de texto livre, porque os documentos não
-  fixam formato nem unidade. A exceção é a hora do ciclo de ácido, que é um campo de hora. Isso vale
-  também para Ciclo, CIP Hipoclorito, os campos de tanques e linhas (UBT … Linha de água) e
-  Limpeza do ponto de coleta. Se as planilhas mostrarem marcação (por exemplo ✔/✘ ou OK), dá para
-  trocar por uma lista de opções sem perder os registros.
-- **Rótulos por extenso:** as abreviações viraram palavras inteiras ("Conc. Inicial Soda" ficou
-  "Concentração Inicial de Soda"; "pH enxágue final" ficou "pH do enxágue final"), seguindo o padrão
-  dos outros formulários. As faixas foram mantidas sem alteração.
-- **Seções:** o agrupamento em seções (Ciclo de soda, Ciclo de ácido, Tanques e linhas…) é só
-  visual, para organizar a tela. Não existe nos documentos.
+Conferência célula a célula das duas abas (Frente e Verso) de cada planilha. As planilhas não têm
+listas de validação nem marcações (✔/OK): todas as células de preenchimento são livres.
+
+**Campos — conferem.** O Anexo 2 tem os 21 campos e o Anexo 3 tem os 30, na mesma ordem do sistema.
+Nenhum campo falta e nenhum sobra. As faixas do Anexo 3 são as mesmas do sistema; o Anexo 2 não tem
+faixas.
+
+**Suposições confirmadas:**
+
+- As listas Filtro 03 e Blendagem do verso do Anexo 3 são as mesmas do Anexo 2.
+- Campos de texto livre: as planilhas não restringem formato nem unidade.
+- As divergências BVPP × BPVPP, FBL filtrada × não filtrada, "Linha de Adega" × "Linha até Adega" e
+  "Membrana" × "de Membrana" estão nas planilhas, exatamente como estavam na descrição.
+
+**Diferenças entre as planilhas e o sistema (ainda não corrigidas):**
+
+| # | Planilha | Sistema hoje | Onde | Tipo |
+|---|---|---|---|---|
+| 1 | Tanque de Lúpulo 1 **- Sol Premium** | Tanque de Lúpulo 1 | Filtro 03, Anexos 2 e 3 | Texto oficial omitido |
+| 2 | Tanque de Lúpulo 2 **- Pilsen** | Tanque de Lúpulo 2 | Filtro 03, Anexos 2 e 3 | Texto oficial omitido |
+| 3 | Tanque de Cerveja **à** Filtrar | Tanque de Cerveja **a** Filtrar | Filtro 03, Anexos 2 e 3 | Grafia |
+| 4 | Sigla "Degas" | DEGAS | Blendagem, só no Anexo 3 (o Anexo 2 traz DEGAS) | Grafia da sigla |
+| 5 | Título do grupo "BMF" | "Grupo BMF" | Os dois formulários | Rótulo (o sistema seguiu a descrição escrita) |
+| 6 | "Linha aldox até utilidades" | "Linha Aldox até utilidades" | Blendagem | Maiúscula |
+
+**Erros de digitação das planilhas, que o sistema escreve corrigidos** (decidir se mantém corrigido):
+"Filtro de Cerceja por placas" (Anexo 2), "Tanque de cervja à Filtrar" e "Taqnue de cerveja
+Filtrada" (Anexo 3), "Adega de água de Diluíção" (os dois) e "Tempo de Circulção" (Anexo 2).
+
+**Rótulos dos campos:** o sistema escreve por extenso o que as planilhas abreviam ("Conc. Inicial
+Soda" → "Concentração Inicial de Soda", "Tempo Circul. Ácido" → "Tempo de Circulação do Ácido",
+"pH enxague final" → "pH do enxágue final"). No Anexo 2, a segunda dupla "Hora Inicial / Hora Final"
+não diz "ciclo ácido": isso vem da descrição escrita e da posição (entre o ciclo de soda e o ciclo de
+ácido). O sistema usa "Hora Inicial do ciclo de ácido" e "Hora Final do ciclo de ácido".
+
+**Seções:** o agrupamento em seções na tela (Ciclo de soda, Tanques e linhas…) é só visual e não
+existe nas planilhas.
+
+**Para corrigir os itens 1 a 6:** basta alterar `docs/js/equipamentos.js`, sem migração. Registros
+já gravados guardam o nome antigo e continuam aparecendo como "(valor registrado)" na edição. Como
+ainda não há registros reais de Filtração, o momento de corrigir é antes da publicação.
 
 ## Banco de dados
 
