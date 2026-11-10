@@ -4,8 +4,8 @@
 > na solicitação, antes de as planilhas originais chegarem. Os arquivos `Anexo 2 CIP Filtração - Filtro 3.xlsx`
 > e `Anexo 3 CIP Filtracao BMF.xlsx` foram enviados em 09/11/2026 e a conferência está na seção
 > "Conferência com as planilhas originais". Os campos e a ordem conferem. Há diferenças de grafia nos
-> equipamentos que **ainda não foram corrigidas no sistema** e aguardam decisão. A v9 não está
-> publicada e as migrações não foram aplicadas em produção.
+> equipamentos que **ainda não foram corrigidas no sistema** e aguardam decisão. A v9 foi
+> publicada em 10/11/2026 assim, com essas diferenças, por decisão do usuário.
 
 ## Como funciona
 

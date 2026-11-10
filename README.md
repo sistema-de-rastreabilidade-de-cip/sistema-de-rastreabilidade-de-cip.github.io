@@ -40,11 +40,11 @@ só objetos `cip_*`, `adega_*`, `vw_cip_*`/`vw_adega_*` e as funções do CIP.
 
 | Versão | Situação |
 |---|---|
-| v8 | Publicada (`main`, commit `340f64e`) |
-| v8.1 | Em desenvolvimento na branch `feature/cip-v8-1`. Não publicada; migração não aplicada em produção |
-| v9 (Filtração) | Em desenvolvimento na mesma branch. Não publicada; migrações não aplicadas em produção |
+| v8 | Publicada em 06/11/2026 (commit `340f64e`; volta rápida: branch `retorno/pre-v8-1`) |
+| v8.1 | Publicada em 10/11/2026; migração aplicada em produção |
+| v9 (Filtração) | Publicada em 10/11/2026 (`main` em `79d0e29`); migrações aplicadas em produção. Formulários pendentes de validação final com as planilhas |
 
-Publicar, fazer merge ou aplicar migrações em produção depende de autorização explícita.
+Novas publicações, merges e migrações em produção continuam dependendo de autorização explícita.
 
 ## Funcionalidades da v8
 
@@ -72,7 +72,7 @@ Publicar, fazer merge ou aplicar migrações em produção depende de autorizaç
   mudaram em cada edição.
 - **Observações administrativas:** o autor vem da conta logada, não do navegador.
 
-## Novidades da v8.1 (não publicada)
+## Novidades da v8.1 (publicada em 10/11/2026)
 
 - **Operadores:** lista cadastrada pelo supervisor (Gestão), sem exclusão. O formulário
   mostra a lista. Os nomes são padronizados e validados no banco. A lista pode se tornar
@@ -98,7 +98,7 @@ desfazer em `supabase/rollback/`. Testes e critérios: `testes/README.md` e
 
 > O formulário antes chamado "CIP OSAM" passou a se chamar **CIP OSAN** (só o nome exibido; o código interno no banco continua `osam`).
 
-## Novidades da v9 (em desenvolvimento, não publicada)
+## Novidades da v9 (publicada em 10/11/2026)
 
 - **CIP Filtração — Filtro 3** (PO-JAC-FAB-005, Anexo 2) e **CIP Filtração — BMF**
   (PO-JAC-FAB-024, Anexo 3): o sistema passa de cinco para **sete formulários**. São dois

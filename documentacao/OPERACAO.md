@@ -2,10 +2,7 @@
 
 Endereço: https://sistema-de-rastreabilidade-de-cip.github.io/
 
-> **Situação:** a v8.1 e a v9 estão em desenvolvimento na branch `feature/cip-v8-1`. Nenhuma
-> delas está publicada no endereço oficial e as migrações não foram aplicadas no banco de
-> produção. Este manual descreve como o sistema vai funcionar depois da publicação, que
-> depende de autorização.
+> **Situação:** a v8.1 e a v9 foram publicadas em 10/11/2026 (site: `main` em `79d0e29`; migrações v8.1 e v9 aplicadas no banco de produção, nessa ordem).
 >
 > **Formulários de Filtração:** foram montados a partir da descrição escrita na solicitação.
 > A conferência com as planilhas originais está registrada em `FORMULARIOS_FILTRACAO.md`, e as
@@ -165,7 +162,7 @@ Lista completa, com a correspondência de cada campo no sistema: `FORMULARIOS_FI
   um nome válido: escolha o nome correto e justifique. A troca fica no histórico de
   alterações.
 
-## Primeiros passos depois de publicar (só com autorização)
+## Primeiros passos depois da publicação
 
 1. Supervisor: Gestão → cadastrar os operadores, usando as sugestões e conferindo a grafia.
 2. Gerar o primeiro backup.

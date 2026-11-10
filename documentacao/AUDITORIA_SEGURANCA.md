@@ -3,7 +3,9 @@
 Data: 06/11/2026. Base: leitura do banco de produção (somente consultas, nada alterado),
 do código em `docs/` e das migrações em `supabase/migrations/`. As correções propostas
 foram implementadas na branch `feature/cip-v8-1` e testadas numa réplica local. A v8.1 e a v9
-não estão publicadas e as migrações não foram aplicadas em produção.
+foram publicadas em 10/11/2026 (site: `main` em `79d0e29`; migrações v8.1 e v9 aplicadas no banco de produção, nessa ordem). Avisos do painel de segurança do Supabase depois da publicação: só os
+esperados (funções SECURITY DEFINER que conferem o perfil por dentro; tabelas de backup sem
+política, sem acesso pela API) e a proteção contra senhas vazadas, ainda desligada.
 
 ## Arquitetura de segurança
 

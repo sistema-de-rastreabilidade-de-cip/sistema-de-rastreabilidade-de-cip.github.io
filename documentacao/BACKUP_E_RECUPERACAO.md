@@ -1,7 +1,6 @@
 # Backup e recuperação dos dados do CIP (v8.1 e v9)
 
-> A v8.1 e a v9 estão em desenvolvimento na branch `feature/cip-v8-1`: não estão publicadas e
-> as migrações não foram aplicadas em produção. O FTR Beer Production (`painel_*`), que usa o
+> A v8.1 e a v9 foram publicadas em 10/11/2026 (site: `main` em `79d0e29`; migrações v8.1 e v9 aplicadas no banco de produção, nessa ordem). O FTR Beer Production (`painel_*`), que usa o
 > mesmo projeto Supabase, não entra no backup e não é alterado.
 
 ## 1. O que entra no backup

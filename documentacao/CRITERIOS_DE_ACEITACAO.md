@@ -144,4 +144,4 @@ test_v8_1.sh. Chave pública: varredura do repositório sem chaves secretas.
 | Limite de alerta de espera sem valor por padrão | test_v8_1.sh |
 | Backup com SHA-256 de integridade, sem alegar autenticidade | BACKUP_E_RECUPERACAO.md, seção 3 |
 | Recuperação aditiva, sem sobrescrever nem apagar | test_v8_1.sh; test_restauracao_historica.sh |
-| Nada publicado nem aplicado em produção | `main` em `340f64e`; migrações v8.1 e v9 só na réplica local |
+| Publicação só com autorização | Autorizada em 10/11/2026; antes, as funções da v8.1 aplicadas em produção foram conferidas uma a uma (20 de 20 idênticas às testadas) e os 27 registros e 2 edições continuaram intactos |
