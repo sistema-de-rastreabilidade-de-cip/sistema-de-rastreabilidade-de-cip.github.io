@@ -18,7 +18,7 @@ docs/                      ← o sistema (o GitHub Pages publica a pasta /docs d
   gestao.html              ← operadores, parâmetros e backup (supervisor)
   js/config.js             ← URL e chave PÚBLICA do Supabase
   js/comum.js              ← datas no fuso da fábrica, selos, navegação, alerta da Adega
-  js/formConfig.js         ← campos dos formulários oficiais (+ CIP OSAM e Filtração)
+  js/formConfig.js         ← campos dos formulários oficiais (+ CIP OSAN e Filtração)
   js/equipamentos.js       ← listas oficiais de equipamentos
 supabase/schema.sql        ← schema de referência anterior à v8
 supabase/migrations/       ← migrações v8, v8.1 e v9, a aplicar em ordem (v8.1 e v9 ainda não aplicadas em produção)
@@ -64,7 +64,7 @@ Publicar, fazer merge ou aplicar migrações em produção depende de autorizaç
   registro; aviso de "próximo do vencimento" com antecedência configurável (padrão 30
   dias). Alerta ao operador ao entrar e faixa em todas as telas enquanto houver
   procedimento vencido ou vencendo hoje.
-- **CIP OSAM:** mesmos campos de processo do CIP Completo, com o BBT escolhido numa
+- **CIP OSAN:** mesmos campos de processo do CIP Completo, com o BBT escolhido numa
   lista fixa (BBT 01 a BBT 12). O banco recusa BBT fora da lista.
 - **Data futura:** a data do CIP não pode ser posterior a hoje (fuso America/Sao_Paulo),
   na tela e no banco (`cip_configuracao`). Regra ainda pendente de validação operacional.
@@ -96,6 +96,8 @@ Migração: `supabase/migrations/20261107120000_cip_v8_1_operadores_backup.sql`,
 desfazer em `supabase/rollback/`. Testes e critérios: `testes/README.md` e
 `documentacao/CRITERIOS_DE_ACEITACAO.md`.
 
+> O formulário antes chamado "CIP OSAM" passou a se chamar **CIP OSAN** (só o nome exibido; o código interno no banco continua `osam`).
+
 ## Novidades da v9 (em desenvolvimento, não publicada)
 
 - **CIP Filtração — Filtro 3** (PO-JAC-FAB-005, Anexo 2) e **CIP Filtração — BMF**
@@ -104,7 +106,7 @@ desfazer em `supabase/rollback/`. Testes e critérios: `testes/README.md` e
   equipamentos de cada documento (grupos BMF, Filtro 03 e Blendagem). Estão integrados ao
   registro, histórico, edição, avaliação, painel, relatórios, exportação e backup.
 - As faixas do Anexo 3 são só referência: o sistema não bloqueia valores fora delas.
-- Os cinco formulários anteriores não mudam; o CIP OSAM continua com BBT 01 a BBT 12.
+- Os cinco formulários anteriores não mudam; o CIP OSAN continua com BBT 01 a BBT 12.
 - Os formulários foram montados a partir da descrição escrita. As planilhas originais
   chegaram em 09/11/2026 e a conferência encontrou diferenças de grafia nos equipamentos,
   **ainda não corrigidas**: os formulários seguem pendentes de validação final. As
@@ -130,7 +132,7 @@ Mudanças no banco: nova migração em `supabase/migrations/` (com o script de d
   antiga de 10 parâmetros). Ponto de retorno: branch `retorno/pre-v8` (commit `321313d`).
 - **Banco:** um script por versão em `supabase/rollback/`, da mais nova para a mais antiga
   (v9, v8.1, v8). Os da v9 e da v8.1 não apagam dados; o da v8 remove avaliações,
-  datas-base e registros OSAM (exporte-os antes). Ver `supabase/rollback/LEIAME.md`.
+  datas-base e registros OSAN (exporte-os antes). Ver `supabase/rollback/LEIAME.md`.
 
 Histórico anterior do código: repositório `PabloConstant/Sistema-de-Rastreabilidade-de-CIP`
 (site antigo na Netlify, mantido ativo temporariamente, usando o mesmo banco).

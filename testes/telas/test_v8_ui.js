@@ -74,7 +74,7 @@ async function semRolagemHorizontal(page) {
   verificar(!(await p.isVisible(".modal-alerta")), "alerta fecha");
   verificar(await p.isVisible(".faixa-alerta-adega"), "faixa de alerta da Adega continua visível");
   const esperadoForms = (await p.evaluate(() => typeof FORM_CONFIG !== "undefined" && !!FORM_CONFIG.filtracao_bmf)) ? 7 : 5; // v9 acrescenta os 2 de Filtração
-  verificar((await p.locator("#op-cartoes-formularios .cartao-formulario").count()) === esperadoForms && (await p.textContent("#op-cartoes-formularios")).includes("OSAM"), `${esperadoForms} formulários (inclui CIP OSAM)`);
+  verificar((await p.locator("#op-cartoes-formularios .cartao-formulario").count()) === esperadoForms && (await p.textContent("#op-cartoes-formularios")).match(/OSA[MN]/) !== null, `${esperadoForms} formulários (inclui CIP OSAN)`);
   verificar(!(await p.isVisible('a[href="contaminados.html"]')), "operador não vê o link de CIPs contaminados");
   await p.reload(); await p.waitForLoadState("networkidle");
   verificar(!(await p.isVisible(".modal-alerta")), "alerta não reaparece na mesma sessão de login");

@@ -18,7 +18,7 @@ Endereço: https://sistema-de-rastreabilidade-de-cip.github.io/
 - **Lista obrigatória de operadores:** desligada. Quem não estiver na lista pode digitar o
   nome.
 - **Limite de alerta de espera:** sem valor. Não há alerta até a coordenação definir um.
-- **CIP OSAM:** BBT escolhido na lista fixa, BBT 01 a BBT 12.
+- **CIP OSAN:** BBT escolhido na lista fixa, BBT 01 a BBT 12.
 
 ## Os sete formulários
 
@@ -28,7 +28,7 @@ Endereço: https://sistema-de-rastreabilidade-de-cip.github.io/
 | CIP Completo | PO-JAC-FAB-004, Anexo 3 |
 | CIP Tanque de Levedura | PO-JAC-FAB-032, Anexo 2 |
 | CIP Linha de Recuperação de Levedura | PO-JAC-FAB-031, Anexo 2 |
-| CIP OSAM | campos do CIP Completo (PO-JAC-FAB-004, Anexo 3) + BBT 01 a BBT 12 |
+| CIP OSAN | campos do CIP Completo (PO-JAC-FAB-004, Anexo 3) + BBT 01 a BBT 12 |
 | CIP Filtração — Filtro 3 (v9) | PO-JAC-FAB-005, Anexo 2, rev. 2 (18/05/2018) |
 | CIP Filtração — BMF (v9) | PO-JAC-FAB-024, Anexo 3, rev. 2 (27/07/2021) |
 
@@ -40,7 +40,7 @@ Endereço: https://sistema-de-rastreabilidade-de-cip.github.io/
   supervisor para cadastrar.
 - O sistema remove espaços extras e recusa nomes vazios, com números ou símbolos.
 - A data do CIP não pode ser futura. A hora final é obrigatória, exceto no Tanque de Levedura.
-- **CIP OSAM:** escolha o BBT na lista (BBT 01 a BBT 12). Os campos são os do CIP Completo.
+- **CIP OSAN:** escolha o BBT na lista (BBT 01 a BBT 12). Os campos são os do CIP Completo.
 
 **Editar:** Histórico → Ver detalhes → Editar este registro. Informe seu nome e uma
 justificativa real (respostas como "erro" ou "corrigir" são recusadas). Se o CIP já tinha

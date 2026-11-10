@@ -15,7 +15,7 @@ Todas as tabelas do CIP, em ordem de dependência. As tabelas do Painel FTR **n�
 | 3 | `adega_procedimentos` | periodicidades da Adega A e B |
 | 4 | `cip_operadores` | lista de operadores |
 | 5 | `cip_operadores_historico` | cadastros, desativações e reativações |
-| 6 | `cip_registros` | registros dos sete tipos de CIP, inclusive OSAM (BBT 01 a BBT 12) e os dois de Filtração (v9), com todos os campos do procedimento em `dados` |
+| 6 | `cip_registros` | registros dos sete tipos de CIP, inclusive OSAN (BBT 01 a BBT 12) e os dois de Filtração (v9), com todos os campos do procedimento em `dados` |
 | 7 | `cip_edicoes` | histórico de edições (antes/depois, justificativa, autor) |
 | 8 | `cip_observacoes` | observações administrativas |
 | 9 | `cip_avaliacoes` | situação atual de cada avaliação |

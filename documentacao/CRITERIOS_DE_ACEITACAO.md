@@ -13,7 +13,7 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 | `banco/test_atomicidade.sh` | 17/17 |
 | `banco/test_v9.sh` (**novo**, Filtração) | 19/19 |
 | `telas/test_v8_ui.js` (regressão v8, agora com 7 formulários) | 96/96 |
-| `telas/test_v8_1_ui.js` (inclui os 5 formulários existentes e OSAM BBT 01–12) | 80/80 |
+| `telas/test_v8_1_ui.js` (inclui os 5 formulários existentes e OSAN BBT 01–12) | 80/80 |
 | `banco/test_restaurar_arquivo.sh` | 10/10 |
 | `telas/test_v9_filtracao_ui.js` (**novo**) | 58/58 |
 | Site v8 (`main`) num banco com v8.1 + v9 aplicadas (**novo**) | 96/96 |
@@ -47,7 +47,7 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 | Relatório, CSV de registros e de histórico, cópia para o Excel e PDF, com colunas "Filtro 3 — …"/"BMF — …" separadas | UI (7 casos) | ✔ |
 | Backup com todos os campos; restauração idêntica num banco vazio | UI; test_v9.sh | ✔ |
 | Sem rolagem horizontal em 1366, 1024, 768 e 390 px (formulários e detalhe) | UI (12 casos) | ✔ |
-| Os 5 tipos existentes continuam gravando; OSAM com BBT 01–12 | test_v8_ui.js; test_v8_1_ui.js; test_v8.sh | ✔ |
+| Os 5 tipos existentes continuam gravando; OSAN com BBT 01–12 | test_v8_ui.js; test_v8_1_ui.js; test_v8.sh | ✔ |
 | Migrações atômicas, com guarda de ordem, idempotentes; desfazer sem apagar registros e reaplicável | test_v9.sh (7 casos) | ✔ |
 | Site atual (v8) segue funcionando com as migrações v9 aplicadas | site v8 num banco v8.1 + v9: 96/96 | ✔ |
 | FTR intocado | test_v9.sh | ✔ |
@@ -134,7 +134,7 @@ test_v8_1.sh. Chave pública: varredura do repositório sem chaves secretas.
 |-------|-----------|
 | Campos oficiais, unidades, equipamentos e listas preservados | Nenhuma alteração nos 5 formulários existentes; a v9 acrescenta os dois de Filtração (7 no total) |
 | Sem limites de processo inventados | Nenhum limite de concentração, temperatura, pressão ou duração no código |
-| OSAM com BBT 01–12 | test_v8.sh; UI "OSAM continua com BBT da lista fixa" |
+| OSAN com BBT 01–12 | test_v8.sh; UI "OSAN continua com BBT da lista fixa" |
 | Regras de avaliação/revisão da v8 | test_v8.sh e test_v8_ui.js sem falhas |
 | Intervalos da Adega inalterados | `adega_procedimentos` não é alterado pela migração |
 | Nenhum registro histórico excluído | migração só aditiva; test_rollback.sh |

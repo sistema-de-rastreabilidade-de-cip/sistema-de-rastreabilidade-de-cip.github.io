@@ -106,7 +106,7 @@ begin
   end if;
   if new.tipo_cip = 'osam' then
     if new.bbt is null or btrim(new.bbt) = '' then
-      raise exception 'Selecione o BBT do CIP OSAM.' using errcode = '23514';
+      raise exception 'Selecione o BBT do CIP OSAN.' using errcode = '23514';
     end if;
     new.equipamento := new.bbt;
   end if;

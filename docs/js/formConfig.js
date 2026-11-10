@@ -137,7 +137,7 @@ const FORM_CONFIG = {
 // Nenhum campo novo (ex.: temperatura) foi acrescentado.
 const BBTS_OSAM = Array.from({ length: 12 }, (_, i) => `BBT ${String(i + 1).padStart(2, "0")}`);
 FORM_CONFIG.osam = {
-  titulo: "CIP OSAM — BBT",
+  titulo: "CIP OSAN — BBT",
   documentoOrigem: "Campos do CIP Completo (PO-JAC-FAB-004, Anexo 3) + identificação do BBT",
   bbt: { label: "BBT", opcoes: BBTS_OSAM },
   temHoraFinal: true,
@@ -223,7 +223,7 @@ const TIPO_CIP_LABELS = {
   completo: "CIP Completo",
   tanque_levedura: "CIP Tanque de Levedura",
   linha_recuperacao_levedura: "CIP Linha de Recuperação de Levedura",
-  osam: "CIP OSAM",
+  osam: "CIP OSAN",
   filtracao_filtro3: "CIP Filtração — Filtro 3",
   filtracao_bmf: "CIP Filtração — BMF",
 };
