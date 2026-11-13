@@ -80,7 +80,8 @@ async function preencherTudo(p, valores) {
   const cOp = await contexto(browser);
   let p = await login(cOp, "operador.teste@local");
   const cards = await p.$$eval("#op-cartoes-formularios .cartao-formulario", (cs) => cs.map((c) => c.textContent.replace(/\s+/g, " ")));
-  v(cards.length === 7, "painel do operador mostra 7 formulários", cards.length);
+  const v10 = await p.evaluate(() => !!FORM_CONFIG.alcalino);
+  v(cards.length === (v10 ? 6 : 7), `painel do operador mostra ${v10 ? "6 formulários (OSAN e Alcalino ficam na Adega)" : "7 formulários"}`, cards.length);
   v(cards.some((c) => c.includes("CIP Filtração — Filtro 3")) && cards.some((c) => c.includes("CIP Filtração — BMF")), "os dois formulários de Filtração aparecem no menu");
 
   // ---------- Filtro 3 ----------

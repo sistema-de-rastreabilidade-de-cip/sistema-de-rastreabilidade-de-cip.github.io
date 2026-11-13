@@ -124,7 +124,8 @@ python3 - "$ORIGC" "$NOVO" <<'PY' && OK=$((OK+1)) || FAIL=$((FAIL+1))
 import json,sys
 a=json.loads(sys.argv[1]); b=json.loads(sys.argv[2])
 # perfis/configuração/procedimentos já existiam no destino; as demais tabelas devem ficar idênticas ao backup
-dif=[t for t in a if t not in ('cip_configuracao','perfis') and a[t]!=b[t]]
+# cip_adega_controles (v10) também é configuração criada pela migração no destino
+dif=[t for t in a if t not in ('cip_configuracao','perfis','cip_adega_controles') and a[t]!=b[t]]
 print(("ok   - dados restaurados idênticos ao backup (checksums por tabela)") if not dif else ("FAIL - tabelas diferentes após restaurar: %s" % dif))
 sys.exit(1 if dif else 0)
 PY

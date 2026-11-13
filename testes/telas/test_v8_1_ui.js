@@ -140,8 +140,8 @@ async function preencherBasico(p, tipo, operador) {
     p = await abrir(cOp, `registro.html?tipo=${tipo}`);
     await preencherBasico(p, tipo, "Ana Lima");
     await p.click("#btn-salvar");
-    await p.waitForURL("**/painel.html", { timeout: 5000 }).catch(() => {});
-    verificar(p.url().endsWith("painel.html"), `formulário ${tipo} grava o registro`, await p.textContent("#mensagem").catch(() => ""));
+    await p.waitForURL(/\/(painel|adega)\.html/, { timeout: 5000 }).catch(() => {});
+    verificar(/(painel|adega)\.html$/.test(p.url()), `formulário ${tipo} grava o registro`, await p.textContent("#mensagem").catch(() => "")); // v10: OSAN volta para a Adega
   }
   verificar((await sql("select count(*)::int from cip_registros;")) === antes + 5, "5 registros novos, um por tipo");
   verificar((await sql("select count(*)::int from cip_registros where tipo_cip='osam' and bbt='BBT 01';")) === 1, "OSAM continua com BBT da lista fixa");

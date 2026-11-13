@@ -1,0 +1,49 @@
+<title>Prévia CIP v10</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Prévia: mesma identidade do sistema (verde Heineken, IBM Plex); página única, tema claro escolhido de propósito */
+  :root { --fundo: #eef1ec; --cartao: #ffffff; --texto: #1c2621; --suave: #4b5750; --verde: #1f4d3a; --admin: #2a4b57; --borda: #d7ded3; --amarelo: #f5d97e; color-scheme: light; }
+  body { background: var(--fundo); color: var(--texto); font: 400 15px/1.55 "IBM Plex Sans", "Segoe UI", Arial, sans-serif; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px; }
+  main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+  .selo { align-self: flex-start; background: var(--amarelo); color: #3a2a00; font: 600 0.78rem "IBM Plex Mono", monospace; padding: 3px 10px; border-radius: 3px; letter-spacing: 0.05em; }
+  h1 { margin: 0; font-size: 1.7rem; color: var(--verde); text-wrap: balance; }
+  p { margin: 0; color: var(--suave); max-width: 65ch; }
+  .entrar { display: flex; gap: 12px; flex-wrap: wrap; }
+  .entrar a { flex: 1 1 220px; text-decoration: none; text-align: center; padding: 14px; border-radius: 6px; font-weight: 600; color: #fff; background: var(--verde); }
+  .entrar a.sup { background: var(--admin); }
+  .entrar a:focus-visible { outline: 3px solid var(--amarelo); outline-offset: 2px; }
+  section { background: var(--cartao); border: 1px solid var(--borda); border-radius: 6px; padding: 18px 20px; }
+  h2 { margin: 0 0 10px; font-size: 1rem; color: var(--verde); }
+  ol, ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  li { max-width: 65ch; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.86em; }
+  .aviso { font-size: 0.86rem; }
+</style>
+<main>
+  <span class="selo">PRÉVIA v10 · DADOS FICTÍCIOS</span>
+  <h1>Sistema de Rastreabilidade de CIP — nova versão</h1>
+  <p>Esta é a versão em desenvolvimento, com um banco simulado no próprio navegador. Ela não se conecta ao Supabase e não altera o site oficial: tudo o que você registrar aqui fica só neste navegador. O botão "Recomeçar a prévia", no topo de cada tela, volta aos dados de exemplo.</p>
+  <div class="entrar">
+    <a href="index.html?entrar=operador" id="entrar-operador">Entrar como operador</a>
+    <a href="index.html?entrar=supervisor" class="sup" id="entrar-supervisor">Entrar como supervisor</a>
+  </div>
+  <section>
+    <h2>O que conferir</h2>
+    <ol>
+      <li><strong>Painel</strong>: o formulário se chama "CIP TFM/HORAP/Trasfega/DAW" e o OSAN saiu da lista.</li>
+      <li><strong>Aba Adega</strong>: CIP Alcalino (30 em 30 dias), CIP Alcalino Clorado (6 em 6 meses) e OSAN com BBT 01 a BBT 12, com periodicidade a definir.</li>
+      <li><strong>Formulário TFM/HORAP/Trasfega/DAW</strong>: equipamentos Adega A, Adega B e Adega D.</li>
+      <li><strong>Faixas dos parâmetros</strong>: registre um CIP com "Conc. Inicial de soda" igual a 5% e veja o resultado em vermelho. O supervisor vê o mesmo na avaliação.</li>
+      <li><strong>Rastreabilidade de Contaminação</strong> (supervisor): mapa de calor, ranking e histórico das ocorrências.</li>
+      <li><strong>Gestão</strong> (supervisor): cadastro das faixas e periodicidade de cada procedimento da Adega.</li>
+    </ol>
+  </section>
+  <section>
+    <h2>Dados de exemplo</h2>
+    <ul class="aviso">
+      <li>As faixas da prévia (soda de 2 a 4 %, ácido de 0,5 a 1,5 %, pressão até 3 bar, só no formulário TFM/HORAP/Trasfega/DAW) são <strong>valores fictícios</strong>, apenas para mostrar o funcionamento. No sistema real a tabela de faixas começa vazia, aguardando as oficiais.</li>
+      <li>Registros, operadores e contaminações são inventados. Backup e download de arquivos não funcionam na prévia.</li>
+    </ul>
+  </section>
+</main>

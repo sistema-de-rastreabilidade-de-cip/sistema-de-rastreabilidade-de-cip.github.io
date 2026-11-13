@@ -227,7 +227,7 @@ const DASH_CORES = {
   grade: "#d7ded3",
   texto: "#4b5750",
 };
-const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c", "#5b5796", "#7a5a2e", "#2f6f8f"];
+const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c", "#5b5796", "#7a5a2e", "#2f6f8f", "#4f6d1f"];
 
 function dashOpcoesBase() {
   return {
@@ -823,19 +823,19 @@ async function dashRenderizarResumo(registros, ag, co, ct, rev) {
 function montarResumoAdegaAdmin(situacoes) {
   const el = document.getElementById("secao-adega-admin");
   if (!el) return;
-  const ordem = { vencido: 0, hoje: 1, proximo: 2, semhistorico: 3, realizado: 4, emdia: 5 };
+  const ordem = { vencido: 0, hoje: 1, proximo: 2, semhistorico: 3, pendente: 4, realizado: 5, emdia: 6 };
   const sit = [...situacoes].sort((a, b) => ordem[a.status] - ordem[b.status]);
   el.innerHTML = `
     <div class="painel-grafico">
       <div class="cabecalho-grafico">
-        <div><h3>Adega — vencimentos dos procedimentos periódicos</h3><p>Situação atual de cada procedimento por adega, calculada a partir dos registros.</p></div>
+        <div><h3>Adega — vencimentos dos procedimentos periódicos</h3><p>Situação atual de cada procedimento da Adega (controle geral), calculada a partir dos registros.</p></div>
         <a class="botao-link secundario" href="adega.html">Abrir aba Adega</a>
       </div>
       <div class="lista-equip">
         ${sit.map((s) => `
           <div class="item-equip">
             <span class="marca-tipo" style="background:${CIP_CORES_TIPO[s.tipo]}"></span>
-            <div class="info"><div class="nome">${dashEscaparHtml(cipRotuloTipo(s.tipo))} — ${dashEscaparHtml(s.adega)}</div><div class="tipo">Próxima data prevista: ${s.proxima ? cipFmtData(s.proxima) : "—"} · ${cipTextoPrazo(s)}</div></div>
+            <div class="info"><div class="nome">${dashEscaparHtml(cipRotuloTipo(s.tipo))}</div><div class="tipo">${dashEscaparHtml(cipTextoPeriodicidade(s.proc))} · Próxima data prevista: ${s.proxima ? cipFmtData(s.proxima) : "—"} · ${cipTextoPrazo(s)}</div></div>
             <div class="quando">${cipSeloStatus(s)}</div>
           </div>`).join("")}
       </div>

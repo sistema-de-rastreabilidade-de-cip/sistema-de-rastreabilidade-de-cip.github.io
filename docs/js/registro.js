@@ -5,8 +5,11 @@
 const params = new URLSearchParams(window.location.search);
 const TIPO = params.get("tipo");
 const ID_REGISTRO = params.get("id"); // presente apenas em modo edição
-// v8: formulário aberto pela aba Adega (Adega A ou Adega B como equipamento)
-const ADEGA_PARAM = CIP_NOMES_ADEGAS.includes(params.get("adega")) ? params.get("adega") : null;
+// Formulário aberto pela aba Adega. v10: a Adega é controlada no modo geral
+// (adega=1, o operador escolhe Adega A, B ou D); links antigos com o nome
+// da adega continuam aceitos e já trazem a adega selecionada.
+const ADEGA_PRESELECIONADA = CIP_NOMES_ADEGAS.includes(params.get("adega")) ? params.get("adega") : null;
+const ADEGA_PARAM = params.get("adega") === "1" || !!ADEGA_PRESELECIONADA;
 
 let CONFIG = null;
 let REGISTRO_ATUAL = null; // carregado do banco, quando em modo edição
@@ -53,7 +56,11 @@ function criarSelectBbt(valorAtual) {
 // Lista do seletor principal: as Adegas quando o formulário veio da aba
 // Adega (ou quando o registro editado é de uma Adega); senão, a lista
 // oficial do formulário.
+function seletorJaIncluiAdegas(tipoSeletor) {
+  return tipoSeletor === "adega" || tipoSeletor === "tfm_horap_trasfega_daw"; // v10
+}
 function listaParaSeletorPrincipal(tipoSeletor, valorAtual) {
+  if (seletorJaIncluiAdegas(tipoSeletor)) return listaEquipamentosParaCampo(tipoSeletor);
   if (ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorAtual)) {
     return OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega");
   }
@@ -142,8 +149,8 @@ function renderizarCamposTopo(valoresIniciais = {}) {
   if (CONFIG.bbt) {
     html += criarSelectBbt(valoresIniciais.bbt || valoresIniciais.equipamento);
   } else if (CONFIG.equipamento) {
-    const valorEquip = valoresIniciais.equipamento || ADEGA_PARAM || "";
-    const ehAdega = ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorEquip);
+    const valorEquip = valoresIniciais.equipamento || ADEGA_PRESELECIONADA || "";
+    const ehAdega = !seletorJaIncluiAdegas(CONFIG.equipamento.tipoSeletor) && (ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valorEquip));
     html += criarSelectEquipamento(
       "equipamento",
       ehAdega ? "Adega" : CONFIG.equipamento.label,
@@ -326,10 +333,11 @@ async function init() {
   CONFIG = FORM_CONFIG[TIPO];
   document.getElementById("titulo-formulario").textContent = CONFIG.titulo;
   document.getElementById("doc-origem").textContent = `Baseado em: ${CONFIG.documentoOrigem}`;
-  if (ADEGA_PARAM && !ID_REGISTRO) {
-    const proc = CIP_ADEGA_ATUAL && CIP_ADEGA_ATUAL.procedimentos.find((p) => p.adega === ADEGA_PARAM && p.tipo_cip === TIPO);
-    document.getElementById("aviso-adega").innerHTML =
-      `<div class="aviso-formulario">Procedimento periódico da ${escaparHtml(ADEGA_PARAM)}${proc ? ` (a cada ${proc.meses} meses)` : ""}: ao salvar, a próxima data prevista é recalculada a partir deste registro.</div>`;
+  if ((ADEGA_PARAM || CONFIG.somenteAdega) && !ID_REGISTRO) {
+    const proc = CIP_ADEGA_ATUAL && CIP_ADEGA_ATUAL.procedimentos.find((p) => p.tipo_cip === TIPO);
+    document.getElementById("aviso-adega").innerHTML = proc
+      ? `<div class="aviso-formulario">Procedimento periódico da Adega (${escaparHtml(cipTextoPeriodicidade(proc))}): ao salvar, a próxima data prevista é recalculada a partir deste registro.</div>`
+      : "";
     document.querySelectorAll('a[href="painel.html"].link-voltar, #link-cancelar').forEach((a) => { a.href = "adega.html"; });
     const voltar = document.querySelector(".link-voltar");
     if (voltar) voltar.innerHTML = "&larr; Voltar à Adega";
@@ -462,7 +470,7 @@ async function onSubmit(e) {
     // preenche sozinho (trigger "cip_registros_set_auditoria_insert" em
     // supabase/schema.sql), ignorando qualquer valor que o cliente envie
     // para eles — mesmo que alguém chame a API diretamente.
-    const { error } = await supabaseClient.from("cip_registros").insert({
+    const { data: salvo, error } = await supabaseClient.from("cip_registros").insert({
       tipo_cip: TIPO,
       equipamento: valores.equipamento,
       ...(TIPO === "osam" ? { bbt: valores.bbt } : {}),
@@ -472,7 +480,7 @@ async function onSubmit(e) {
       nome_operador: valores.nome_operador,
       dados: valores.dados,
       observacoes_operador: valores.observacoes_operador,
-    });
+    }).select("id, verificacao_parametros");
 
     if (error) {
       mostrarMensagem("erro", "Erro ao salvar o registro: " + error.message);
@@ -480,10 +488,38 @@ async function onSubmit(e) {
       return;
     }
 
+    const destino = ADEGA_PARAM || CONFIG.somenteAdega || (TIPO === "alcalino_clorado" && CIP_NOMES_ADEGAS.includes(valores.equipamento)) ? "adega.html" : "painel.html";
+    const registroSalvo = Array.isArray(salvo) ? salvo[0] : salvo;
+    // v10: com faixas cadastradas para este tipo, o operador vê o resultado
+    // da comparação antes de sair da tela.
+    if (registroSalvo && registroSalvo.verificacao_parametros) {
+      mostrarResultadoParametros(registroSalvo, destino);
+      return;
+    }
     mostrarMensagem("sucesso", "Registro de CIP salvo com sucesso.");
-    const destino = ADEGA_PARAM || CIP_NOMES_ADEGAS.includes(valores.equipamento) ? "adega.html" : "painel.html";
     setTimeout(() => (window.location.href = destino), 900);
   }
+}
+
+function mostrarResultadoParametros(registro, destino) {
+  const v = registro.verificacao_parametros;
+  document.getElementById("form-cip").classList.add("oculto");
+  const fora = v.fora_da_faixa || 0;
+  mostrarMensagem(fora ? "erro" : "sucesso", fora
+    ? `Registro de CIP salvo. <strong>${fora} parâmetro(s) fora da faixa aceitável</strong> — confira abaixo. O supervisor verá o mesmo resultado na avaliação.`
+    : "Registro de CIP salvo. Todos os parâmetros com faixa cadastrada estão dentro da faixa.");
+  const area = document.getElementById("resultado-parametros");
+  area.innerHTML = `
+    <section class="cartao-secao resultado-parametros">
+      <h2>Verificação dos parâmetros</h2>
+      ${cipTabelaVerificacao(TIPO, v)}
+      <div class="acoes-resultado">
+        <a class="botao-link secundario" href="historico.html?registroId=${encodeURIComponent(registro.id)}">Ver o registro</a>
+        <a class="botao-link primario" id="btn-continuar-registro" href="${destino}">Continuar</a>
+      </div>
+    </section>`;
+  area.classList.remove("oculto");
+  area.scrollIntoView({ block: "start" });
 }
 
 init();

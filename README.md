@@ -43,6 +43,7 @@ só objetos `cip_*`, `adega_*`, `vw_cip_*`/`vw_adega_*` e as funções do CIP.
 | v8 | Publicada em 06/11/2026 (commit `340f64e`; volta rápida: branch `retorno/pre-v8-1`) |
 | v8.1 | Publicada em 10/11/2026; migração aplicada em produção |
 | v9 (Filtração) | Publicada em 10/11/2026 (`main` em `79d0e29`); migrações aplicadas em produção. Formulários pendentes de validação final com as planilhas |
+| v10 (Adega geral, faixas, rastreabilidade de contaminação) | **Em desenvolvimento** na branch `feature/cip-v10`. Não publicada; migrações preparadas e testadas só localmente. Ver `documentacao/V10_ADEGA_FAIXAS_RASTREABILIDADE.md` |
 
 Novas publicações, merges e migrações em produção continuam dependendo de autorização explícita.
 

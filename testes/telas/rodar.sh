@@ -10,7 +10,7 @@ DB="${DB:-cip_ui}"; PORTA_WEB="${PORTA_WEB:-8787}"
 pkill -f "shim.py .* $DB $PORTA_WEB" 2>/dev/null; sleep 0.3
 bash "$TESTES_DIR/banco/recriar.sh" "$DB" todas || exit 1
 "${PSQL_BASE[@]}" -d "$DB" -c "insert into cip_registros (tipo_cip, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('completo','Adega A',current_date-400,'07:00','08:00','Operador Fictício A','{}'),('alcalino_clorado','Adega A',current_date-20,'07:00','08:00','Operador Fictício B','{}');" >/dev/null
-if [ -n "$APOS_SQL" ]; then "${PSQL_BASE[@]}" -v ON_ERROR_STOP=1 -d "$DB" -f "$APOS_SQL" >/dev/null || { echo "Falha ao aplicar $APOS_SQL"; exit 1; }; fi
+for arq in $APOS_SQL; do "${PSQL_BASE[@]}" -v ON_ERROR_STOP=1 -d "$DB" -f "$arq" >/dev/null || { echo "Falha ao aplicar $arq"; exit 1; }; done  # vários arquivos: separados por espaço, na ordem
 python3 shim.py "${DOCS_DIR:-$REPO_DIR/docs}" "$DB" "$PORTA_WEB" > "$PGTESTE_DIR/shim_$DB.log" 2>&1 &
 SHIM=$!
 sleep 1

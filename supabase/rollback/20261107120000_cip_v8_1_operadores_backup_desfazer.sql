@@ -41,6 +41,11 @@ begin
      or to_regclass('public.cip_operadores') is null then
     raise exception 'A v8.1 não está aplicada (cip_backup ou cip_operadores ausentes). Nada foi alterado.';
   end if;
+  -- A v10 usa funções da v8.1 (restauração técnica): desfaça a v10 antes.
+  if to_regclass('public.cip_adega_controles') is not null
+     or exists (select 1 from pg_trigger where tgname = 'trg_cip_registros_verificar_parametros') then
+    raise exception 'A v10 está aplicada e depende da v8.1. Execute antes supabase/rollback/20261113120100_cip_v10_desfazer.sql. Nada foi alterado.';
+  end if;
   if exists (select 1 from pg_namespace where nspname = v_arquivo) then
     raise exception 'O schema de arquivo % já existe. Aguarde um segundo e rode de novo.', v_arquivo;
   end if;

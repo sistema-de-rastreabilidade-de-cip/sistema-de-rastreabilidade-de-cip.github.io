@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rastreabilidade de Contaminação — Rastreabilidade de CIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="marca-logo" src="assets/logo-heineken-transparente.png" alt="Heineken" />
+      </div>
+      <nav class="navegacao-topo">
+        <a href="painel.html" class="link-nav">Painel</a>
+        <a href="historico.html" class="link-nav">Histórico</a>
+        <a href="adega.html" class="link-nav">Adega</a>
+        <a href="rastreabilidade.html" class="link-nav so-admin oculto ativo">Rastreabilidade de Contaminação</a>
+        <a href="relatorios.html" class="link-nav so-admin oculto">Relatórios</a>
+        <a href="gestao.html" class="link-nav so-admin oculto">Gestão</a>
+      </nav>
+      <div class="usuario-topo">
+        <span id="info-usuario"></span>
+        <button type="button" onclick="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <section>
+      <div class="secao-titulo"><h2>Rastreabilidade de Contaminação</h2><span class="selo-area">Área administrativa</span></div>
+      <p class="texto-suave" style="margin:-4px 0 0;">Conta somente os CIPs cuja avaliação atual é <strong>Contaminado</strong>: cada CIP conta uma vez, mesmo que tenha sido reavaliado. "Revisão necessária" sozinha não conta. A data da ocorrência é a data do CIP.</p>
+    </section>
+    <div id="mensagem"></div>
+
+    <section class="filtros-rastreio">
+      <div class="barra-filtros" style="margin:0;">
+        <div class="campo-filtro"><label for="rt-periodo">Período</label>
+          <select id="rt-periodo">
+            <option value="3">Últimos 3 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="12" selected>Últimos 12 meses</option>
+            <option value="ano">Este ano</option>
+            <option value="todos">Todo o histórico</option>
+            <option value="personalizado">Personalizado</option>
+          </select></div>
+        <div class="campo-filtro rt-datas oculto"><label for="rt-inicio">De</label><input type="date" id="rt-inicio" /></div>
+        <div class="campo-filtro rt-datas oculto"><label for="rt-fim">Até</label><input type="date" id="rt-fim" /></div>
+        <div class="campo-filtro"><label for="rt-tipo">Tipo de CIP</label><select id="rt-tipo"><option value="">Todos</option></select></div>
+        <div class="campo-filtro"><label for="rt-equip">Equipamento</label><input type="search" id="rt-equip" placeholder="Ex.: Tanque 08, BBT 03" /></div>
+      </div>
+    </section>
+
+    <section class="indicadores-rastreio" id="rt-indicadores" aria-live="polite"></section>
+
+    <section class="cartao">
+      <div class="cabecalho-bloco">
+        <h3>Mapa de calor — contaminações por equipamento e mês</h3>
+        <div class="legenda-calor" id="rt-legenda"></div>
+      </div>
+      <div class="mapa-calor-rolagem"><table class="mapa-calor" id="rt-mapa"></table></div>
+      <p class="sem-dado nota-pequena" id="rt-criterio"></p>
+    </section>
+
+    <div class="grade-rastreio">
+      <section class="cartao">
+        <h3 style="margin-top:0;">Ranking de recorrência</h3>
+        <ol class="ranking-equip" id="rt-ranking"></ol>
+      </section>
+      <section class="cartao">
+        <div class="cabecalho-bloco">
+          <h3 style="margin:0;">Histórico de ocorrências</h3>
+          <span id="rt-filtro-ativo"></span>
+        </div>
+        <div class="lista-ocorrencias" id="rt-ocorrencias"></div>
+      </section>
+    </div>
+
+    <section class="cartao" id="rt-config">
+      <h3 style="margin-top:0;">Critério de cores do mapa de calor</h3>
+      <p class="texto-suave">Sem limites definidos, as cores usam a <strong>escala relativa</strong>: cada célula é comparada com o maior total do período (verde abaixo de 1/3 dele, amarelo a partir de 1/3, vermelho a partir de 2/3). Para usar números fixos, informe a partir de quantas contaminações a célula fica amarela e vermelha — use somente critérios aprovados pela coordenação.</p>
+      <div class="barra-filtros" style="margin:0;">
+        <div class="campo-filtro"><label for="rt-lim-amarelo">Amarelo a partir de</label><input type="number" id="rt-lim-amarelo" min="1" max="1000" placeholder="relativo" /></div>
+        <div class="campo-filtro"><label for="rt-lim-vermelho">Vermelho a partir de</label><input type="number" id="rt-lim-vermelho" min="2" max="1000" placeholder="relativo" /></div>
+        <div class="botoes" style="margin-top:0;"><button type="button" class="secundario" id="rt-salvar-limites">Salvar</button><button type="button" class="secundario" id="rt-limpar-limites">Usar escala relativa</button></div>
+      </div>
+      <div id="rt-erro-config"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/formConfig.js"></script>
+  <script src="js/comum.js"></script>
+  <script src="js/rastreabilidade.js"></script>
+</body>
+</html>

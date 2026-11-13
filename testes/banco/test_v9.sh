@@ -25,7 +25,7 @@ ver "migração 2 recusada antes da migração 1" "$("${P[@]}" -d $DB -f "$M2" >
 
 echo "== Banco com todas as migrações =="
 DB=cip_v9
-bash recriar.sh $DB todas >/dev/null || exit 1
+bash recriar.sh $DB v9 >/dev/null || exit 1   # banco no estado da v9 (a v10 tem testes próprios)
 ver "enum tem os 2 tipos novos" "$(Q "select string_agg(enumlabel, ',' order by enumlabel) from pg_enum where enumlabel like 'filtracao%'")" "filtracao_bmf,filtracao_filtro3"
 ver "7 valores no tipo de CIP" "$(Q "select count(*) from pg_enum e join pg_type t on t.oid=e.enumtypid where t.typname='tipo_cip_enum'")" "7"
 ver "regra de data futura inclui os 5 antigos e os 2 novos" "$(Q "select cardinality(tipos_data_futura) from cip_configuracao")" "7"
@@ -53,7 +53,7 @@ begin; $ADM select cip_criar_backup(); commit;
 SQL
 ver "backup inclui os dados da Filtração" "$(Q "select count(*) from cip_backup.snapshots s, jsonb_array_elements(s.conteudo->'tabelas'->'cip_registros') r where r->>'tipo_cip' like 'filtracao%' and r->'dados' ? case when r->>'tipo_cip'='filtracao_bmf' then 'bmf_soaking' else 'f3_ciclo' end")" "2"
 DB2=cip_v9_dest
-bash recriar.sh $DB2 todas >/dev/null || exit 1
+bash recriar.sh $DB2 v9 >/dev/null || exit 1
 "${P[@]}" -d $DB -c "copy (select conteudo from cip_backup.snapshots order by id desc limit 1) to stdout" > "$PGTESTE_DIR/v9_backup.json"
 "${P[@]}" -d $DB2 >/dev/null 2>&1 <<SQL
 \set c \`cat $PGTESTE_DIR/v9_backup.json\`

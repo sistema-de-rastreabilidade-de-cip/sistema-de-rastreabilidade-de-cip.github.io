@@ -39,12 +39,15 @@ const FORM_CONFIG = {
     ],
   },
 
+  // v10: o antigo "CIP Completo" passa a se chamar "CIP TFM/HORAP/Trasfega/DAW"
+  // (só o nome exibido; o código interno continua "completo"). A lista de
+  // equipamentos ganha Adega A, Adega B e Adega D.
   completo: {
-    titulo: "CIP Completo — TFM/HORAP/Trasfega",
+    titulo: "CIP TFM/HORAP/Trasfega/DAW",
     documentoOrigem: "PO-JAC-FAB-004, Anexo 3",
     equipamento: {
-      label: "TFM/HORAP/Trasfega",
-      tipoSeletor: "tfm_horap_trasfega",
+      label: "TFM/HORAP/Trasfega/DAW/Adega",
+      tipoSeletor: "tfm_horap_trasfega_daw",
     },
     temHoraFinal: true,
     campos: [
@@ -141,6 +144,21 @@ FORM_CONFIG.osam = {
   documentoOrigem: "Campos do CIP Completo (PO-JAC-FAB-004, Anexo 3) + identificação do BBT",
   bbt: { label: "BBT", opcoes: BBTS_OSAM },
   temHoraFinal: true,
+  somenteAdega: true, // v10: acessado pela aba Adega, fora dos cartões do Painel
+  campos: FORM_CONFIG.completo.campos.map((c) => ({ ...c })),
+};
+
+// =====================================================================
+// v10 — CIP Alcalino (aba Adega, a cada 30 dias). Campos iguais aos do
+// CIP Completo / TFM-HORAP-Trasfega-DAW (PO-JAC-FAB-004, Anexo 3), por
+// decisão do usuário em 13/11/2026. Equipamento: Adega A, B ou D.
+// =====================================================================
+FORM_CONFIG.alcalino = {
+  titulo: "CIP Alcalino — Adega",
+  documentoOrigem: "Campos do PO-JAC-FAB-004, Anexo 3 (iguais ao CIP TFM/HORAP/Trasfega/DAW)",
+  equipamento: { label: "Adega", tipoSeletor: "adega" },
+  temHoraFinal: true,
+  somenteAdega: true,
   campos: FORM_CONFIG.completo.campos.map((c) => ({ ...c })),
 };
 
@@ -220,7 +238,8 @@ FORM_CONFIG.filtracao_bmf = {
 
 const TIPO_CIP_LABELS = {
   alcalino_clorado: "CIP Alcalino Clorado",
-  completo: "CIP Completo",
+  completo: "CIP TFM/HORAP/Trasfega/DAW",
+  alcalino: "CIP Alcalino",
   tanque_levedura: "CIP Tanque de Levedura",
   linha_recuperacao_levedura: "CIP Linha de Recuperação de Levedura",
   osam: "CIP OSAN",

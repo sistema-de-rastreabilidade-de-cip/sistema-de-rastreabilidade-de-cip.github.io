@@ -19,7 +19,7 @@
         <a href="painel.html" class="link-nav">Painel</a>
         <a href="historico.html" class="link-nav">Histórico</a>
         <a href="adega.html" class="link-nav">Adega</a>
-        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+        <a href="rastreabilidade.html" class="link-nav so-admin oculto">Rastreabilidade de Contaminação</a>
         <a href="relatorios.html" class="link-nav so-admin oculto">Relatórios</a>
         <a href="gestao.html" class="link-nav so-admin oculto ativo">Gestão</a>
       </nav>
@@ -69,6 +69,22 @@
           <div class="botoes" style="margin-top:0;"><button type="button" class="secundario" id="btn-salvar-alerta">Salvar</button><button type="button" class="secundario" id="btn-remover-alerta">Remover limite</button></div>
         </div>
         <div id="erro-alerta"></div>
+      </div>
+    </section>
+
+    <section id="secao-faixas">
+      <h2 class="secao-titulo">Faixas aceitáveis dos parâmetros</h2>
+      <div class="cartao">
+        <p class="texto-suave" style="margin-top:0;">Cadastre aqui somente as faixas oficiais. Cada tipo de CIP tem as suas faixas, sem mistura entre formulários. Parâmetro sem faixa cadastrada (ou desativado) não é comparado. A comparação é gravada em cada registro no momento em que ele é salvo, com as faixas vigentes; registros anteriores não são recalculados.</p>
+        <div class="barra-filtros" style="margin:0 0 12px;">
+          <div class="campo-filtro"><label for="faixa-tipo">Tipo de CIP</label><select id="faixa-tipo"></select></div>
+          <span class="sem-dado" id="faixa-resumo" style="align-self:center;"></span>
+        </div>
+        <div class="tabela-rolagem"><table class="tabela-simples tabela-faixas">
+          <thead><tr><th>Parâmetro</th><th>Mínimo</th><th>Máximo</th><th>Unidade</th><th>Comparar</th><th></th></tr></thead>
+          <tbody id="corpo-faixas"><tr><td colspan="6">Carregando...</td></tr></tbody>
+        </table></div>
+        <div id="erro-faixa"></div>
       </div>
     </section>
 

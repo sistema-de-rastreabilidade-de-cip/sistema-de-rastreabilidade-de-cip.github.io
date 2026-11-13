@@ -8,6 +8,26 @@ Endereço: https://sistema-de-rastreabilidade-de-cip.github.io/
 > A conferência com as planilhas originais está registrada em `FORMULARIOS_FILTRACAO.md`, e as
 > correções que ela aponta ainda não foram aplicadas aos formulários.
 
+## Mudanças que vêm com a v10 (ainda não publicada)
+
+Esta seção vale só depois da publicação da v10. Detalhes em `V10_ADEGA_FAIXAS_RASTREABILIDADE.md`.
+
+- **Painel:** "CIP Completo" passa a se chamar "CIP TFM/HORAP/Trasfega/DAW", com Adega A, B e D
+  na lista de equipamentos. O CIP OSAN sai dos cartões do Painel.
+- **Aba Adega:** controle geral, sem separar as adegas. Três procedimentos, cada um com o botão
+  "Registrar CIP":
+  - CIP Alcalino, a cada 30 dias;
+  - CIP Alcalino Clorado, a cada 6 meses;
+  - CIP OSAN, com BBT 01 a BBT 12 e periodicidade a definir.
+
+  O supervisor configura a periodicidade, a antecedência do aviso e a data-base em "Configurar
+  este procedimento", no próprio cartão.
+- **Faixas dos parâmetros:** o supervisor cadastra as faixas oficiais em Gestão. O operador vê,
+  depois de salvar, quais parâmetros ficaram fora da faixa (em vermelho), e o supervisor vê o
+  mesmo no detalhe do registro.
+- **Rastreabilidade de Contaminação:** aba nova do supervisor, com mapa de calor, ranking e
+  histórico das ocorrências, por período, tipo e equipamento.
+
 ## Configuração padrão
 
 - **Contas:** as duas contas compartilhadas continuam as mesmas (operação e supervisão).

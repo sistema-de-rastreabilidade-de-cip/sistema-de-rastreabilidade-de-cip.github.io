@@ -1,4 +1,4 @@
-# Critérios de aceitação — v8.1 e v9
+# Critérios de aceitação — v8.1, v9 e v10
 
 Resultado da execução completa em 09/11/2026, com a revisão corretiva da v8.1 e a v9 (réplica
 local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verificações, nenhuma falha.**
@@ -19,6 +19,44 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 | Site v8 (`main`) num banco com v8.1 + v9 aplicadas (**novo**) | 96/96 |
 | Site v8 (`main`) num banco com a v8.1 desfeita | 96/96 |
 | Site legado (Netlify) contra o banco atual | 7/7 |
+
+## v10 — em desenvolvimento (13/11/2026), não publicada
+
+Execução completa em 13/11/2026, na branch `feature/cip-v10` (`bash testes/rodar_tudo.sh`): **17 conjuntos, 928 verificações, nenhuma falha**. Mais 11 verificações da prévia navegável.
+
+| Suíte | Resultado |
+|-------|-----------|
+| `banco/test_v10.sh` (**novo**) | 82/82 |
+| `telas/test_v10_ui.js` (**novo**) | 97/97 |
+| Regressão: test_v8 68, test_v8_1 61, restauração histórica 30, concorrência 5, desfazer 27, atomicidade 17, test_v9 19, restaurar arquivo 10 | todas sem falha |
+| Telas anteriores: test_v8_ui 79, test_v8_1_ui 80, test_v9_filtracao_ui 58 | sem falha |
+| Site em produção (`main`) num banco com a v10 / com a v10 desfeita / com v10 e v8.1 desfeitas | 96/96 em cada |
+| Site legado (Netlify) | 7/7 |
+
+| Critério | Teste | Resultado |
+|----------|-------|-----------|
+| "CIP Completo" exibido como "CIP TFM/HORAP/Trasfega/DAW"; campos iguais | UI | ✔ |
+| OSAN e CIP Alcalino fora dos cartões do Painel; acessados pela Adega | UI | ✔ |
+| Adega A, B e D no formulário TFM/HORAP/Trasfega/DAW; lista anterior mantida; outros formulários inalterados; banco aceita | UI; test_v10 | ✔ |
+| Adega no modo geral: Alcalino 30 dias, Alcalino Clorado 6 meses, OSAN pendente (nada inventado) | UI; test_v10 | ✔ |
+| Cálculo da periodicidade (vencido, realizado, próxima data = último + período), alerta e faixa | UI (7 casos) | ✔ |
+| Alcalino Clorado em tanque de fermentação não conta para a Adega | test_v10 | ✔ |
+| Periodicidade, antecedência e data-base só pelo supervisor, com histórico imutável | UI; test_v10 (10 casos) | ✔ |
+| Faixas: tabela começa vazia; sem faixa, sem comparação | test_v10; UI | ✔ |
+| Comparação: dentro, abaixo, acima, vazio e sem número; valores preservados; resultado gravado e não forjável | test_v10 (8 casos) | ✔ |
+| Faixas por tipo, sem mistura entre formulários | test_v10; UI | ✔ |
+| Operador vê o resultado depois de salvar; supervisor vê na avaliação; CSV registra a condição | UI (6 casos) | ✔ |
+| Edição recalcula a verificação; registros antigos não são recalculados ao mudar a faixa | test_v10 | ✔ |
+| Mapa de calor: conta só "Contaminado", sem duplicar reavaliações, sem contar "Revisão necessária" sozinha | test_v10; UI | ✔ |
+| Ranking, indicadores, histórico, filtros (período, tipo, equipamento) e registro de origem | UI (9 casos) | ✔ |
+| Cores: escala relativa por padrão e limites fixos configuráveis, só pelo supervisor | test_v10; UI | ✔ |
+| Permissões: operador sem acesso à Rastreabilidade e às configurações; anônimo sem leitura | test_v10; UI | ✔ |
+| Sem rolagem horizontal em 1366, 1024, 768 e 390 px (7 telas) | UI (28 casos) | ✔ |
+| Backup inclui as tabelas novas; backups antigos continuam válidos; restauração idêntica | test_v10 (5 casos) | ✔ |
+| Migrações atômicas, com trava de ordem e reaplicação; desfazer arquiva e permite reaplicar | test_v10 (12 casos) | ✔ |
+| Desfazer da v8.1 recusado enquanto a v10 estiver aplicada | test_v10 | ✔ |
+| FTR intocado; só objetos do CIP | test_v10; consulta só de leitura em produção | ✔ |
+| Nada publicado nem aplicado em produção | `main` em `7d1664f`; produção com 27 registros e 7 tipos | ✔ |
 
 ## v9 — CIP Filtração (Filtro 3 e BMF)
 

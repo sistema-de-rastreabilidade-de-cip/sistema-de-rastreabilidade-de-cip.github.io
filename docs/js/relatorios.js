@@ -91,6 +91,7 @@ function relCsvRegistros() {
   const cab = ["ID do registro", "Data do CIP", "Hora inicial", "Hora final", "Tipo de CIP", "Equipamento", "BBT", "Operador",
     "Situação da avaliação", "Revisão necessária", "Avaliado por", "Avaliado em", "Descrição/justificativa da avaliação",
     "Observações do operador", "Observações administrativas", "Nº de alterações", "Nº de eventos de avaliação", "Criado em", "Última atualização",
+    "Verificação dos parâmetros",
     ...campos.map(([, label]) => label)];
   const linhas = d.registros.map((r) => [
     r.id, cipFmtData(r.data_cip), cipHora(r.hora_inicial), r.hora_final ? cipHora(r.hora_final) : "", cipRotuloTipo(r.tipo_cip),
@@ -98,6 +99,7 @@ function relCsvRegistros() {
     r.avaliador_nome || "", r.avaliado_em ? cipFmtDataHora(r.avaliado_em) : "", r.avaliacao_observacao || "",
     r.observacoes_operador || "", relTextoObs(d.obs[r.id]), (d.edicoes[r.id] || []).length, (d.avaliacoes[r.id] || []).length,
     cipFmtDataHora(r.criado_em), r.atualizado_em ? cipFmtDataHora(r.atualizado_em) : "",
+    cipResumoVerificacaoTexto(r.tipo_cip, r.verificacao_parametros),
     ...campos.map(([key]) => (r.dados && r.dados[key]) || ""),
   ]);
   return { cab, linhas, texto: cipMontarCsv(cab, linhas) };

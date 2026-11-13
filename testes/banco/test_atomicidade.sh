@@ -74,7 +74,7 @@ ver "nada muda quando a v8 está ausente" "$ANTES" "$(P $DB -c "$IMP")"
 
 echo "== Desfazer da v8.1 com falha controlada =="
 for MODO in "psql sem ON_ERROR_STOP" "arquivo inteiro como um comando (SQL Editor)"; do
-  DB=cip_atom; bash recriar.sh $DB todas >/dev/null || exit 1
+  DB=cip_atom; bash recriar.sh $DB v9 >/dev/null || exit 1
   ANTES=$(P $DB -c "$IMP")
   case "$MODO" in
     "psql sem ON_ERROR_STOP") P $DB -f "$TMP/rb_falha_fim.sql" >/dev/null 2>&1 ;;

@@ -404,6 +404,11 @@ async function abrirDetalhe(id, opcoes) {
         <button type="button" class="secundario" onclick="document.getElementById('area-detalhe').innerHTML=''">Fechar</button>
       </div>
 
+      <fieldset id="secao-verificacao">
+        <legend>Verificação dos parâmetros</legend>
+        ${cipTabelaVerificacao(registro.tipo_cip, registro.verificacao_parametros)}
+      </fieldset>
+
       <fieldset id="secao-avaliacao">
         <legend>Avaliação do CIP</legend>
         ${htmlAvaliacao(registro)}

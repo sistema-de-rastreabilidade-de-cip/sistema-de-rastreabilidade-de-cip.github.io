@@ -43,6 +43,7 @@ const OUTROS_EQUIPAMENTOS = [
   { categoria: "linha_recuperacao_fermento", nome: "Linha de Recuperação de Fermento", codigo: "LRF" },
   { categoria: "adega", nome: "Adega A", codigo: "A" },
   { categoria: "adega", nome: "Adega B", codigo: "B" },
+  { categoria: "adega", nome: "Adega D", codigo: "D" }, // v10
   { categoria: "trasfega", nome: "Linha de Trasfega", codigo: "LT" },
 ];
 
@@ -70,6 +71,10 @@ function listaEquipamentosParaCampo(tipoSeletor) {
   switch (tipoSeletor) {
     case "tfm_horap_trasfega":
       return [...TANQUES_FERMENTACAO, OUTROS_EQUIPAMENTOS.find((e) => e.codigo === "LT")];
+    case "tfm_horap_trasfega_daw": // v10: CIP TFM/HORAP/Trasfega/DAW (antigo Completo)
+      return [...TANQUES_FERMENTACAO, OUTROS_EQUIPAMENTOS.find((e) => e.codigo === "LT"), ...OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega")];
+    case "adega": // v10: CIP Alcalino
+      return OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega");
     case "tq_levedura":
       return TANQUES_LEVEDURA;
     case "tfm":

@@ -19,7 +19,7 @@
         <a href="painel.html" class="link-nav">Painel</a>
         <a href="historico.html" class="link-nav">Histórico</a>
         <a href="adega.html" class="link-nav ativo">Adega</a>
-        <a href="contaminados.html" class="link-nav so-admin oculto">CIPs contaminados</a>
+        <a href="rastreabilidade.html" class="link-nav so-admin oculto">Rastreabilidade de Contaminação</a>
         <a href="relatorios.html" class="link-nav so-admin oculto">Relatórios</a>
         <a href="gestao.html" class="link-nav so-admin oculto">Gestão</a>
       </nav>
@@ -37,7 +37,7 @@
     </section>
     <div id="mensagem"></div>
     <section>
-      <div class="grid-adegas" id="grid-adegas"><div class="cartao">Carregando...</div></div>
+      <div class="grid-procedimentos" id="grid-adegas"><div class="cartao">Carregando...</div></div>
       <div class="legenda-status" id="legenda-status"></div>
       <p class="sem-dado" style="margin-top:6px;" id="nota-status"></p>
     </section>
@@ -46,7 +46,7 @@
       <div class="barra-filtros config-adega">
         <div class="campo-filtro"><label for="cfg-dias-aviso">Antecedência para "próximo do vencimento" (dias)</label><input type="number" id="cfg-dias-aviso" min="1" max="120" /></div>
         <div class="botoes" style="margin-top:0;"><button type="button" class="secundario" id="btn-salvar-dias-aviso">Salvar</button></div>
-        <span class="sem-dado" style="flex:1;min-width:220px;">A data-base de cada procedimento só pode ser configurada quando ainda não existe registro daquele CIP na adega.</span>
+        <span class="sem-dado" style="flex:1;min-width:220px;">Antecedência geral, usada pelos procedimentos sem antecedência própria. Periodicidade, antecedência própria e data-base ficam em "Configurar este procedimento", em cada cartão; a data-base só vale enquanto não houver registro daquele CIP na Adega.</span>
       </div>
       <div id="erro-config-adega"></div>
     </section>

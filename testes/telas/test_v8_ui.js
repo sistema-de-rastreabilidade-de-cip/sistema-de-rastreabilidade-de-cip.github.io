@@ -67,15 +67,21 @@ async function semRolagemHorizontal(page) {
   // ================= OPERADOR =================
   const ctxOp = await novoContexto(browser);
   let p = await login(ctxOp, "operador.teste@local");
+  // v10: a Adega passa a ser controlada no modo geral (coberta em test_v10_ui.js);
+  // os trechos da Adega por adega só valem para o site anterior.
+  const ADEGA_V10 = await p.evaluate(() => typeof FORM_CONFIG !== "undefined" && !!FORM_CONFIG.alcalino);
+  if (!ADEGA_V10) {
   await p.waitForSelector(".modal-alerta", { timeout: 5000 }).catch(() => {});
   verificar(await p.isVisible(".modal-alerta"), "operador: alerta da Adega aparece ao entrar");
   verificar((await p.textContent(".modal-corpo")).includes("CIP Completo — Adega A"), "alerta lista CIP Completo — Adega A (vencido)");
   await p.click("#btn-fechar-modal-adega");
   verificar(!(await p.isVisible(".modal-alerta")), "alerta fecha");
   verificar(await p.isVisible(".faixa-alerta-adega"), "faixa de alerta da Adega continua visível");
-  const esperadoForms = (await p.evaluate(() => typeof FORM_CONFIG !== "undefined" && !!FORM_CONFIG.filtracao_bmf)) ? 7 : 5; // v9 acrescenta os 2 de Filtração
-  verificar((await p.locator("#op-cartoes-formularios .cartao-formulario").count()) === esperadoForms && (await p.textContent("#op-cartoes-formularios")).match(/OSA[MN]/) !== null, `${esperadoForms} formulários (inclui CIP OSAN)`);
-  verificar(!(await p.isVisible('a[href="contaminados.html"]')), "operador não vê o link de CIPs contaminados");
+  }
+  const esperadoForms = ADEGA_V10 ? 6 : (await p.evaluate(() => typeof FORM_CONFIG !== "undefined" && !!FORM_CONFIG.filtracao_bmf)) ? 7 : 5; // v9: +2 de Filtração; v10: OSAN e Alcalino só na Adega
+  const textoCartoes = await p.textContent("#op-cartoes-formularios");
+  verificar((await p.locator("#op-cartoes-formularios .cartao-formulario").count()) === esperadoForms && (ADEGA_V10 ? !/OSA[MN]/.test(textoCartoes) : /OSA[MN]/.test(textoCartoes)), `${esperadoForms} formulários no Painel (${ADEGA_V10 ? "OSAN só pela Adega" : "inclui CIP OSAN"})`);
+  verificar(!(await p.isVisible('a.link-nav[href="contaminados.html"], a.link-nav[href="rastreabilidade.html"]')), "operador não vê o link de CIPs contaminados");
   await p.reload(); await p.waitForLoadState("networkidle");
   verificar(!(await p.isVisible(".modal-alerta")), "alerta não reaparece na mesma sessão de login");
   await p.screenshot({ path: path.join(SHOTS, "operador-painel-1366.png"), fullPage: true });
@@ -121,11 +127,12 @@ async function semRolagemHorizontal(page) {
   await p.selectOption("#equipamento", "BBT 07");
   await p.screenshot({ path: path.join(SHOTS, "registro-osam-1366.png"), fullPage: true });
   await p.click("#btn-salvar");
-  await p.waitForURL("**/painel.html");
+  await p.waitForURL(/\/(painel|adega)\.html/); // v10: OSAN volta para a aba Adega
   const osam = await sql("select json_build_object('bbt',bbt,'equip',equipamento,'soda',dados->>'conc_inicial_soda')::jsonb from cip_registros where tipo_cip='osam';");
   verificar(osam && osam.bbt === "BBT 07" && osam.equip === "BBT 07" && osam.soda === "1,8%", "OSAM gravado com BBT 07 e campos do Completo", osam);
 
   // Adega pelo operador
+  if (!ADEGA_V10) {
   p = await abrir(ctxOp, "adega.html");
   const stA = await p.getAttribute('.proc-adega[data-adega="Adega A"][data-tipo="completo"] .selo-status', "data-status");
   verificar(stA === "vencido", "Adega A / Completo aparece como vencido", stA);
@@ -144,6 +151,7 @@ async function semRolagemHorizontal(page) {
   await p.waitForLoadState("networkidle");
   verificar((await p.getAttribute('.proc-adega[data-adega="Adega A"][data-tipo="completo"] .selo-status', "data-status")) === "realizado", "após registrar, Adega A / Completo fica realizado");
   verificar((await p.locator(".faixa-alerta-adega").count()) === 0, "faixa some quando não há mais pendência");
+  }
 
   // Histórico: correção do histórico de alterações (criado_em)
   p = await abrir(ctxOp, `historico.html?registroId=${R1}`);
@@ -156,7 +164,7 @@ async function semRolagemHorizontal(page) {
   const ctxAd = await novoContexto(browser);
   let a = await login(ctxAd, "admin.teste@local");
   verificar(!(await p.isVisible(".modal-alerta")) && (await a.locator(".modal-alerta").count()) === 0, "administrador não recebe o alerta modal");
-  verificar(await a.isVisible('a[href="contaminados.html"]'), "administrador vê o link de CIPs contaminados");
+  verificar(await a.isVisible('a.link-nav[href="contaminados.html"], a.link-nav[href="rastreabilidade.html"]'), "administrador vê o link de CIPs contaminados");
   const ordem = await a.evaluate(() => ["secao-operadores", "secao-avaliacao-admin", "grafico-a"].map((id) => document.getElementById(id).getBoundingClientRect().top));
   verificar(ordem[0] < ordem[1] && ordem[1] < ordem[2], "ordem do painel: operador → avaliação → demais gráficos", ordem);
   const graf = JSON.parse(await a.getAttribute("#grafico-operadores", "data-grafico"));
@@ -270,6 +278,7 @@ async function semRolagemHorizontal(page) {
   await a.click("#link-voltar-grafico"); await a.waitForURL("**/painel.html*");
 
   // Adega pelo administrador
+  if (!ADEGA_V10) {
   a = await abrir(ctxAd, "adega.html");
   verificar(await a.isVisible("#secao-config-adega"), "administrador vê a configuração da Adega");
   const sel = '.proc-adega[data-adega="Adega B"][data-tipo="completo"]';
@@ -292,6 +301,7 @@ async function semRolagemHorizontal(page) {
   verificar((await a.textContent("#nota-status")).includes("45 dia"), "antecedência salva (45 dias)");
   await a.fill("#cfg-dias-aviso", "30"); await a.click("#btn-salvar-dias-aviso");
   await a.waitForFunction(() => document.getElementById("nota-status").textContent.includes("30 dia"), null, { timeout: 5000 });
+  }
 
   // Operador não acessa contaminados
   p = await abrir(ctxOp, "contaminados.html");
@@ -318,7 +328,7 @@ async function semRolagemHorizontal(page) {
     await cOp.close(); await cAd.close();
   }
 
-  verificar((await sql("select count(*)::int from cip_registros;")) === total0 + 3, "total de registros = inicial + 3 criados no teste");
+  verificar((await sql("select count(*)::int from cip_registros;")) === total0 + (ADEGA_V10 ? 2 : 3), `total de registros = inicial + ${ADEGA_V10 ? 2 : 3} criados no teste`);
   verificar(errosConsole.length === 0, "nenhum erro no console", errosConsole.slice(0, 8));
   console.log(`\nResultado: ${ok} ok, ${falhas} falha(s)`);
   await browser.close();

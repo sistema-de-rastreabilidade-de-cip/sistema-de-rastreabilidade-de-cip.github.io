@@ -50,6 +50,7 @@ function opFmtData(dataIso) {
 }
 
 const OP_CORES_TIPO = {
+  alcalino: "#4f6d1f",
   alcalino_clorado: "#1f4d3a",
   completo: "#3c7a5c",
   tanque_levedura: "#8a5a12",
@@ -291,7 +292,9 @@ async function opCarregarUltimosPorEquipamento() {
 
 function opMontarCartoesFormularios() {
   const container = document.getElementById("op-cartoes-formularios");
+  // v10: OSAN e CIP Alcalino ficam na aba Adega (fora dos cartões do Painel)
   container.innerHTML = Object.entries(FORM_CONFIG)
+    .filter(([, cfg]) => !cfg.somenteAdega)
     .map(([tipo, cfg]) => {
       const icone = tipo === "tanque_levedura" ? OP_ICONE.gota : tipo === "linha_recuperacao_levedura" ? OP_ICONE.linhas : tipo === "osam" ? OP_ICONE.tanque : tipo.startsWith("filtracao_") ? OP_ICONE.filtro : OP_ICONE.doc;
       return `
