@@ -130,7 +130,7 @@ function renderizarTabela(registros, acumular) {
         <td data-label="Data">${formatarData(r.data_cip)}</td>
         <td data-label="Tipo de CIP"><span class="badge">${escaparHtml(cipRotuloTipo(r.tipo_cip))}</span></td>
         <td data-label="Equipamento" class="col-texto">${cipRotuloEquipHtml(r)}</td>
-        <td data-label="Operador" class="col-texto">${escaparHtml(r.nome_operador)}</td>
+        <td data-label="Operador" class="col-texto">${escaparHtml(cipTextoOperadores(r))}</td>
         <td data-label="Hora Inicial">${cipHora(r.hora_inicial)}</td>
         <td data-label="Avaliação" class="col-texto">${cipSelos(r)}</td>
         <td><button type="button" class="secundario" data-id="${escaparHtml(r.id)}" onclick="abrirDetalhe('${escaparHtml(r.id)}')">Ver detalhes</button></td>
@@ -394,7 +394,11 @@ async function abrirDetalhe(id, opcoes) {
       <div class="campo-dado"><span>${registro.tipo_cip === "osam" ? "BBT" : "Equipamento"}</span><span class="valor">${escaparHtml(registro.tipo_cip === "osam" ? registro.bbt : registro.equipamento)}</span></div>
       <div class="campo-dado"><span>Hora Inicial</span><span class="valor">${cipHora(registro.hora_inicial)}</span></div>
       ${config && config.temHoraFinal ? `<div class="campo-dado"><span>Hora Final</span><span class="valor">${cipHora(registro.hora_final)}</span></div>` : ""}
-      <div class="campo-dado"><span>Operador</span><span class="valor">${escaparHtml(registro.nome_operador)}</span></div>
+      ${cipOperadorInicio(registro)
+        ? `<div class="campo-dado"><span>Operador que iniciou</span><span class="valor">${escaparHtml(cipOperadorInicio(registro))}</span></div>
+      <div class="campo-dado"><span>Operador que finalizou</span><span class="valor">${escaparHtml(registro.nome_operador)}</span></div>
+      <p class="nota-turno">CIP que passou de turno: iniciado por um operador e finalizado por outro.</p>`
+        : `<div class="campo-dado"><span>Operador</span><span class="valor">${escaparHtml(registro.nome_operador)}</span></div>`}
       ${renderizarCamposDados(registro.tipo_cip, registro.dados)}
       <div class="campo-dado"><span>Observações</span><span class="valor">${escaparHtml(registro.observacoes_operador || "—")}</span></div>
       <p class="rodape-doc">Criado em ${formatarDataHora(registro.criado_em)} · Última atualização em ${formatarDataHora(registro.atualizado_em)}</p>

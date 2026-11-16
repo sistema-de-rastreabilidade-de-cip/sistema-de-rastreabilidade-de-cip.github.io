@@ -75,14 +75,15 @@
     <section id="secao-faixas">
       <h2 class="secao-titulo">Faixas aceitáveis dos parâmetros</h2>
       <div class="cartao">
-        <p class="texto-suave" style="margin-top:0;">Cadastre aqui somente as faixas oficiais. Cada tipo de CIP tem as suas faixas, sem mistura entre formulários. Parâmetro sem faixa cadastrada (ou desativado) não é comparado. A comparação é gravada em cada registro no momento em que ele é salvo, com as faixas vigentes; registros anteriores não são recalculados.</p>
+        <p class="texto-suave" style="margin-top:0;">As faixas oficiais das tabelas "Anexo 1" (TQ Fermentação, TQs de Levedura, Adegas, BMF, Aldox e Degás) já vêm cadastradas. Cada tipo de CIP tem as suas faixas, por grupo de equipamentos, sem mistura entre formulários; a faixa do grupo tem prioridade sobre a de "Todos os equipamentos". Parâmetro sem faixa (ou desativado) não é comparado. A comparação é gravada em cada registro no momento em que ele é salvo, com as faixas vigentes; registros anteriores não são recalculados.</p>
         <div class="barra-filtros" style="margin:0 0 12px;">
           <div class="campo-filtro"><label for="faixa-tipo">Tipo de CIP</label><select id="faixa-tipo"></select></div>
+          <div class="campo-filtro" id="campo-faixa-grupo"><label for="faixa-grupo">Grupo de equipamentos</label><select id="faixa-grupo"></select></div>
           <span class="sem-dado" id="faixa-resumo" style="align-self:center;"></span>
         </div>
         <div class="tabela-rolagem"><table class="tabela-simples tabela-faixas">
-          <thead><tr><th>Parâmetro</th><th>Mínimo</th><th>Máximo</th><th>Unidade</th><th>Comparar</th><th></th></tr></thead>
-          <tbody id="corpo-faixas"><tr><td colspan="6">Carregando...</td></tr></tbody>
+          <thead><tr><th>Parâmetro</th><th>Mínimo</th><th>Máximo</th><th>Unidade</th><th>Documento de origem</th><th>Comparar</th><th></th></tr></thead>
+          <tbody id="corpo-faixas"><tr><td colspan="7">Carregando...</td></tr></tbody>
         </table></div>
         <div id="erro-faixa"></div>
       </div>

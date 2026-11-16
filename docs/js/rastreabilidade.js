@@ -154,7 +154,7 @@ function rtRenderOcorrencias(oc) {
       <div class="oc-corpo">
         <div class="oc-titulo">${cipRotuloEquipHtml(r)} <span class="oc-tipo">${cipEsc(cipRotuloTipo(r.tipo_cip))}</span>${r.revisao_pendente ? ' <span class="selo-revisao">Revisão necessária</span>' : ""}</div>
         <div class="oc-just">${cipEsc(r.avaliacao_observacao || "—")}</div>
-        <div class="oc-meta">Avaliado por ${cipEsc(r.avaliador_nome || "—")} em ${r.avaliado_em ? cipFmtDataHora(r.avaliado_em) : "—"} · Operador: ${cipEsc(r.nome_operador)}</div>
+        <div class="oc-meta">Avaliado por ${cipEsc(r.avaliador_nome || "—")} em ${r.avaliado_em ? cipFmtDataHora(r.avaliado_em) : "—"} · Operador: ${cipEsc(cipTextoOperadores(r))}</div>
       </div>
       <a class="botao-link secundario oc-ver" href="historico.html?registroId=${encodeURIComponent(r.id)}">Ver registro</a>
     </article>`).join("") || '<p class="sem-dado">Nenhuma ocorrência.</p>';
@@ -173,7 +173,7 @@ function rtRenderizar() {
 async function rtCarregar() {
   const { data, error } = await supabaseClient
     .from("vw_cip_registros")
-    .select("id, tipo_cip, equipamento, bbt, data_cip, hora_inicial, nome_operador, situacao_avaliacao, revisao_pendente, avaliacao_observacao, avaliador_nome, avaliado_em")
+    .select("id, tipo_cip, equipamento, bbt, data_cip, hora_inicial, nome_operador, dados, situacao_avaliacao, revisao_pendente, avaliacao_observacao, avaliador_nome, avaliado_em")
     .eq("situacao_avaliacao", "contaminado")
     .order("data_cip", { ascending: false })
     .limit(5000);

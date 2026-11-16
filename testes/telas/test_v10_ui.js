@@ -92,7 +92,8 @@ const semRolagem = (p) => p.evaluate(() => document.documentElement.scrollWidth 
   // Aba Adega pelo operador
   p = await abrir(cOp, "adega.html");
   const ordem = await p.$$eval(".proc-adega", (els) => els.map((e) => e.dataset.tipo));
-  v(JSON.stringify(ordem) === JSON.stringify(["alcalino", "alcalino_clorado", "osam"]), "Adega com os três procedimentos, na ordem pedida", ordem);
+  v(JSON.stringify(ordem) === JSON.stringify(["alcalino", "alcalino_clorado", "osam", "degas", "aldox"]), "Adega com os cinco procedimentos (inclui Degás e Aldox), na ordem", ordem);
+  v((await p.textContent('.proc-adega[data-tipo="degas"] .proc-periodo')).includes("a cada 7 dia(s)") && (await p.textContent('.proc-adega[data-tipo="aldox"] .proc-periodo')).includes("a cada 7 dia(s)"), "Degás e Aldox semanais (tabelas PO-JAC-FAB-030 e 029)");
   v((await p.$$eval(".cartao-adega", (e) => e.length)) === 0 && !(await p.textContent("#grid-adegas")).includes("Nenhum procedimento"), "Adega no modo geral (sem cartões separados por adega)");
   v((await status(p, "alcalino")) === "vencido", "CIP Alcalino de 31 dias atrás aparece vencido (30 em 30 dias)", await status(p, "alcalino"));
   v((await status(p, "alcalino_clorado")) === "realizado", "Alcalino Clorado na Adega há 20 dias: realizado (6 em 6 meses)", await status(p, "alcalino_clorado"));
@@ -130,7 +131,7 @@ const semRolagem = (p) => p.evaluate(() => document.documentElement.scrollWidth 
   let a = await login(cAd, "admin.teste@local");
   v(await a.isVisible('a.link-nav[href="rastreabilidade.html"]') && (await a.textContent('a.link-nav[href="rastreabilidade.html"]')).includes("Rastreabilidade de Contaminação"), "aba 'Rastreabilidade de Contaminação' no menu do supervisor");
   a = await abrir(cAd, "adega.html");
-  v((await a.locator(".config-procedimento").count()) === 3, "supervisor configura cada procedimento");
+  v((await a.locator(".config-procedimento").count()) === 5, "supervisor configura cada procedimento");
   await a.click('.proc-adega[data-tipo="osam"] summary');
   await a.fill("#ctl-osam-qtd", "3"); await a.click('.proc-adega[data-tipo="osam"] .btn-salvar-periodo');
   v((await a.textContent('.proc-adega[data-tipo="osam"] .erro-base')).includes("unidade"), "periodicidade sem unidade recusada na tela");
@@ -144,65 +145,128 @@ const semRolagem = (p) => p.evaluate(() => document.documentElement.scrollWidth 
   v((await sql("select count(*)::int from cip_adega_controles_historico where tipo_cip='osam';")) === 2, "alterações de periodicidade ficam no histórico");
   await a.screenshot({ path: path.join(SHOTS, "v10-adega-supervisor-1366.png"), fullPage: true });
 
-  // Faixas na Gestão (valores FICTÍCIOS de teste — só neste banco local)
+  // Faixas na Gestão: carga oficial das tabelas Anexo 1
   a = await abrir(cAd, "gestao.html");
   await a.selectOption("#faixa-tipo", "completo");
-  v((await a.textContent("#faixa-resumo")).includes("comparação desligada"), "sem faixas: comparação desligada");
-  v((await a.locator("#corpo-faixas tr").count()) === 18, "Gestão lista os 18 parâmetros não-horário do formulário", await a.locator("#corpo-faixas tr").count());
-  const linha = '#corpo-faixas tr[data-campo="conc_inicial_soda"]';
-  await a.fill(`${linha} .faixa-min`, "5"); await a.fill(`${linha} .faixa-max`, "4"); await a.click(`${linha} .btn-salvar-faixa`);
+  v((await a.textContent("#faixa-resumo")).includes("15 faixa(s) ativa(s)"), "CIP TFM/HORAP/Trasfega/DAW com as 15 faixas oficiais", await a.textContent("#faixa-resumo"));
+  const gruposCompleto = await a.$$eval("#faixa-grupo option", (o) => o.map((x) => x.textContent));
+  v(gruposCompleto.length === 4 && gruposCompleto[0].startsWith("Tanques de fermentação") && gruposCompleto.includes("Linha de Trasfega (CIP 7)"), "faixas por grupo de equipamentos", gruposCompleto);
+  v((await a.locator("#corpo-faixas tr").count()) === 18, "Gestão lista os 18 parâmetros não-horário do formulário");
+  const lsoda = '#corpo-faixas tr[data-campo="conc_inicial_soda"]';
+  v((await a.inputValue(`${lsoda} .faixa-min`)) === "2" && (await a.inputValue(`${lsoda} .faixa-max`)) === "3" && (await a.inputValue(`${lsoda} .faixa-fonte`)).includes("TQs de Fermentação"), "soda dos tanques: 2 a 3 %, com o documento de origem");
+  await a.selectOption("#faixa-grupo", "trasfega");
+  v((await a.inputValue('#corpo-faixas tr[data-campo="tempo_circulacao_soda"] .faixa-max')) === "90", "Linha de Trasfega: tempo de soda até 90 min (60 ± 30)");
+  v((await a.inputValue('#corpo-faixas tr[data-campo="conc_inicial_divosan"] .faixa-min')) === "", "Trasfega sem faixa de Divosan (não consta na tabela)");
+  await a.selectOption("#faixa-tipo", "filtracao_bmf");
+  v((await a.$$eval("#faixa-grupo option", (o) => o.map((x) => x.textContent))).includes("Membranas do BMF") && (await a.inputValue('#corpo-faixas tr[data-campo="bmf_conc_inicial_divos"] .faixa-min')) === "4500", "BMF: membranas com Divos X5 a partir de 4500 ppm");
+  await a.selectOption("#faixa-tipo", "completo"); await a.selectOption("#faixa-grupo", "todos");
+  const lp = '#corpo-faixas tr[data-campo="pressao"]';
+  await a.fill(`${lp} .faixa-min`, "5"); await a.fill(`${lp} .faixa-max`, "4"); await a.click(`${lp} .btn-salvar-faixa`);
   v((await a.textContent("#erro-faixa")).includes("mínimo não pode ser maior"), "mínimo maior que máximo recusado");
-  await a.fill(`${linha} .faixa-min`, "2"); await a.fill(`${linha} .faixa-max`, "4"); await a.fill(`${linha} .faixa-un`, "%");
-  await a.click(`${linha} .btn-salvar-faixa`); await a.waitForSelector(".mensagem-sucesso");
-  await a.waitForFunction(() => document.getElementById("faixa-resumo").textContent.includes("1 parâmetro"));
-  v(true, "faixa fictícia salva (1 parâmetro com comparação ativa)");
   await a.selectOption("#faixa-tipo", "osam");
-  v((await a.textContent("#faixa-resumo")).includes("comparação desligada"), "faixa do TFM/HORAP/Trasfega/DAW não aparece no OSAN (sem mistura)");
+  v((await a.textContent("#faixa-resumo")).includes("comparação desligada") && (await a.isHidden("#campo-faixa-grupo")), "OSAN sem faixa (sem tabela própria) e sem mistura com outros formulários");
+  await a.selectOption("#faixa-tipo", "completo"); await a.selectOption("#faixa-grupo", "tanques_fermentacao");
   await a.screenshot({ path: path.join(SHOTS, "v10-gestao-faixas-1366.png"), fullPage: true });
 
   // Operador registra com valor fora da faixa e vê o resultado
   p = await abrir(cOp, "registro.html?tipo=completo");
   await preencherBasico(p, { equip: "Tanque de Fermentação 07" });
   await p.fill("#campo_conc_inicial_soda", "9%");
+  await p.fill("#campo_conc_final_soda", "2,6%");
   await p.click("#btn-salvar");
   await p.waitForSelector(".resultado-parametros");
   v((await p.textContent("#mensagem")).includes("1 parâmetro(s) fora da faixa"), "operador vê o aviso de parâmetro fora da faixa depois de salvar");
-  const linhaFora = await p.$eval(".tabela-verificacao tbody tr", (tr) => ({ fora: tr.classList.contains("verif-fora"), txt: tr.textContent.replace(/\s+/g, " ") }));
-  v(linhaFora.fora && linhaFora.txt.includes("Conc. Inicial de soda") && linhaFora.txt.includes("9%") && linhaFora.txt.includes("2 %") && linhaFora.txt.includes("4 %") && linhaFora.txt.includes("Acima do máximo"), "tabela mostra parâmetro, valor, mínimo, máximo e situação em vermelho", linhaFora.txt);
+  const linhaFora = await p.$eval(".tabela-verificacao tbody tr.verif-fora", (tr) => tr.textContent.replace(/\s+/g, " "));
+  v(linhaFora.includes("Conc. Inicial de soda") && linhaFora.includes("9%") && linhaFora.includes("2 %") && linhaFora.includes("3 %") && linhaFora.includes("Acima do máximo") && linhaFora.includes("TQs de Fermentação"), "tabela mostra parâmetro, origem, valor, mínimo, máximo e situação em vermelho", linhaFora);
+  v((await p.$$eval(".tabela-verificacao tbody tr", (t) => t.length)) === 9, "verificação usa as 9 faixas dos tanques de fermentação");
   v(await p.evaluate(() => getComputedStyle(document.querySelector(".selo-verif-acima")).backgroundColor) === "rgb(162, 59, 59)", "situação fora da faixa destacada em vermelho");
   await p.screenshot({ path: path.join(SHOTS, "v10-resultado-parametros-1366.png"), fullPage: true });
   const idFora = await sql("select to_json(id) from cip_registros where equipamento='Tanque de Fermentação 07' and tipo_cip='completo';");
   v((await sql(`select to_json(dados->>'conc_inicial_soda') from cip_registros where id='${idFora}';`)) === "9%", "valor original preservado como digitado");
   await p.click("#btn-continuar-registro"); await p.waitForURL("**/painel.html");
   v(true, "botão Continuar volta ao Painel");
-  // Dentro da faixa
+  // Dentro da faixa: mostra a situação normal e segue sozinho
   p = await abrir(cOp, "registro.html?tipo=completo");
   await preencherBasico(p, { equip: "Tanque de Fermentação 11" });
   await p.fill("#campo_conc_inicial_soda", "2,5%");
   await p.click("#btn-salvar"); await p.waitForSelector(".resultado-parametros");
-  v((await p.textContent("#mensagem")).includes("dentro da faixa"), "valor dentro da faixa: situação normal");
+  v((await p.textContent("#mensagem")).includes("situação normal"), "valor dentro da faixa: situação normal");
+  await p.waitForURL("**/painel.html", { timeout: 8000 });
+  v(true, "sem parâmetro fora da faixa, a tela segue sozinha para o Painel");
+  // Mesmo valor, outro equipamento: 60 min de soda é normal na Trasfega
+  p = await abrir(cOp, "registro.html?tipo=completo");
+  await preencherBasico(p, { equip: "Linha de Trasfega" });
+  await p.fill("#campo_tempo_circulacao_soda", "60 min");
+  await p.click("#btn-salvar"); await p.waitForSelector(".resultado-parametros");
+  v((await p.textContent("#mensagem")).includes("situação normal") && (await p.textContent(".tabela-verificacao")).includes("Linha de Trasfega (CIP 7)"), "Trasfega usa a própria faixa (60 ± 30 min)");
+  // CIP que passou de turno: um só envio com quem iniciou e quem finalizou
+  p = await abrir(cOp, "registro.html?tipo=completo");
+  v(await p.isHidden("#bloco-operador-inicio"), "troca de turno: campo de quem iniciou escondido por padrão");
+  await preencherBasico(p, { equip: "Tanque de Fermentação 12", operador: "Operador Noite" });
+  await p.check("#passou_turno");
+  const rotFinal = (await p.textContent('label[for="nome_operador_lista"], label[for="nome_operador"]')).replace("*", "").trim();
+  v(await p.isVisible("#bloco-operador-inicio") && rotFinal === "Operador que finalizou", "ao marcar, aparece 'Operador que iniciou' e o Operador vira 'quem finalizou'", rotFinal);
+  if (await p.$("#operador_inicio_lista")) await p.selectOption("#operador_inicio_lista", "__outro__");
+  await p.fill("#operador_inicio", "operador noite");
+  await p.click("#btn-salvar");
+  v((await p.textContent("#mensagem")).includes("mesma pessoa"), "mesma pessoa nos dois campos é recusada na tela");
+  await p.fill("#operador_inicio", "  Operador   Tarde ");
+  await p.screenshot({ path: path.join(SHOTS, "v10-troca-turno-1366.png"), fullPage: true });
+  await p.click("#btn-salvar"); await p.waitForURL("**/painel.html", { timeout: 8000 });
+  v((await sql("select to_json(nome_operador||'|'||(dados->>'operador_inicio')) from cip_registros where equipamento='Tanque de Fermentação 12' order by criado_em desc limit 1;")) === "Operador Noite|Operador Tarde", "grava quem finalizou (Operador) e quem iniciou, padronizado");
+  const idTurno = await sql("select to_json(id) from cip_registros where equipamento='Tanque de Fermentação 12' order by criado_em desc limit 1;");
+  p = await abrir(cOp, `registro.html?tipo=completo&id=${idTurno}`);
+  v(await p.isChecked("#passou_turno") && (await p.inputValue("#operador_inicio")) === "Operador Tarde", "edição abre com a troca de turno marcada e o nome de quem iniciou");
+  p = await abrir(cOp, "registro.html?tipo=completo");
+  await preencherBasico(p, { equip: "Tanque de Fermentação 13" });
+  await p.check("#passou_turno"); await p.uncheck("#passou_turno");
+  await p.click("#btn-salvar"); await p.waitForURL("**/painel.html", { timeout: 8000 });
+  v((await sql("select to_json((dados ? 'operador_inicio')::text) from cip_registros where equipamento='Tanque de Fermentação 13' order by criado_em desc limit 1;")) === "false", "desmarcado, salva normalmente só com o Operador");
+
   // Tipo sem faixa: segue direto, sem tela de resultado
-  p = await abrir(cOp, "registro.html?tipo=tanque_levedura");
-  await preencherBasico(p, { equip: "Tanque de Levedura 01" });
+  p = await abrir(cOp, "registro.html?tipo=filtracao_filtro3");
+  await preencherBasico(p, { equip: "Filtro de Cerveja por placas — F03" });
   await p.click("#btn-salvar"); await p.waitForURL("**/painel.html");
-  v(true, "tipo sem faixa cadastrada salva normalmente, sem comparação");
+  v(true, "tipo sem faixa (Filtro 3, sem tabela enviada) salva normalmente, sem comparação");
+
+  // CIP Degás pela aba Adega, com esterilização abaixo de 80 ºC
+  p = await abrir(cOp, "adega.html");
+  await p.click('.proc-adega[data-tipo="degas"] a.botao-link'); await p.waitForLoadState("networkidle");
+  v((await p.textContent("#titulo-formulario")).includes("CIP Degás") && (await p.textContent("#doc-origem")).includes("PO-JAC-FAB-030"), "formulário do CIP Degás (PO-JAC-FAB-030)");
+  v(JSON.stringify(await p.$$eval("#equipamento option", (o) => o.map((x) => x.value).filter(Boolean))) === JSON.stringify(["Degas — DEGAS"]), "equipamento Degás");
+  const rotDeg = await p.$$eval("#campos-dados label", (l) => l.map((x) => x.textContent.replace("*", "").trim()));
+  v(rotDeg.length === 9 && rotDeg.includes("Esterilização: temperatura no retorno (°C)") && rotDeg.includes("pH para isenção"), "campos montados a partir da tabela (9)", rotDeg);
+  await preencherBasico(p, { equip: "Degas — DEGAS" });
+  await p.fill("#campo_conc_inicial_soda", "2,5%"); await p.fill("#campo_esterilizacao_temperatura", "75 °C"); await p.fill("#campo_esterilizacao_tempo", "30");
+  await p.click("#btn-salvar"); await p.waitForSelector(".resultado-parametros");
+  v((await p.textContent(".tabela-verificacao tr.verif-fora")).includes("Abaixo do mínimo"), "esterilização a 75 ºC sinalizada abaixo de 80 ºC");
+  await p.screenshot({ path: path.join(SHOTS, "v10-degas-resultado-1366.png"), fullPage: true });
+  await p.click("#btn-continuar-registro"); await p.waitForURL("**/adega.html"); await p.waitForLoadState("networkidle");
+  v((await status(p, "degas")) === "realizado", "CIP Degás registrado: situação realizado");
+  p = await abrir(cOp, "registro.html?tipo=aldox&adega=1");
+  v(JSON.stringify(await p.$$eval("#equipamento option", (o) => o.map((x) => x.value).filter(Boolean))) === JSON.stringify(["Aldox — Aldox"]), "formulário do CIP Aldox com o equipamento Aldox");
 
   // Supervisor vê a mesma verificação na revisão
   a = await abrir(cAd, `historico.html?registroId=${idFora}&foco=avaliacao`);
   await a.waitForSelector("#secao-verificacao");
-  v((await a.$$eval("#secao-verificacao tr.verif-fora", (t) => t.length)) === 1 && (await a.textContent("#secao-verificacao")).includes("1 de 1"), "supervisor vê o parâmetro fora da faixa durante a avaliação");
+  v((await a.$$eval("#secao-verificacao tr.verif-fora", (t) => t.length)) === 1 && (await a.textContent("#secao-verificacao")).includes("1 de 9"), "supervisor vê o parâmetro fora da faixa durante a avaliação");
   await a.screenshot({ path: path.join(SHOTS, "v10-detalhe-verificacao-1366.png"), fullPage: true });
-  const R1 = "10000000-0000-0000-0000-000000000001";
-  a = await abrir(cAd, `historico.html?registroId=${R1}`);
+  const R3 = "10000000-0000-0000-0000-000000000003"; // Linha de Recuperação de Levedura: sem tabela, sem faixa
+  a = await abrir(cAd, `historico.html?registroId=${R3}`);
   await a.waitForSelector("#secao-verificacao");
-  v((await a.textContent("#secao-verificacao")).includes("comparação está desligada"), "registro sem faixa na época: comparação desligada");
+  v((await a.textContent("#secao-verificacao")).includes("comparação está desligada"), "tipo sem faixa: comparação desligada");
+  a = await abrir(cAd, `historico.html?registroId=${idTurno}`);
+  await a.waitForSelector("#secao-verificacao");
+  const det = await a.textContent(".detalhe-registro");
+  v(det.includes("Operador que iniciou") && det.includes("Operador Tarde") && det.includes("Operador que finalizou") && det.includes("Operador Noite"), "supervisor vê quem iniciou e quem finalizou");
   // CSV
   a = await abrir(cAd, "relatorios.html");
   await a.selectOption("#r-tipo", "completo"); await a.click("#btn-gerar-relatorio");
   await a.waitForFunction(() => Number((document.getElementById("rel-total") || {}).textContent) > 0);
   const [dl] = await Promise.all([a.waitForEvent("download"), a.click("#btn-csv-registros")]);
   const csv = fs.readFileSync(await dl.path(), "utf8");
-  v(csv.includes("Verificação dos parâmetros") && csv.includes("1 de 1 fora da faixa: Conc. Inicial de soda = 9% (máx. 4 %)"), "CSV registra a condição encontrada");
+  v(csv.includes("Verificação dos parâmetros") && csv.includes("1 de 9 fora da faixa: Conc. Inicial de soda = 9% (máx. 3 %)"), "CSV registra a condição encontrada");
+  v(csv.includes("Operador que iniciou (troca de turno)") && csv.includes("Operador Noite;Operador Tarde"), "CSV com a coluna de quem iniciou");
 
   // ============ Rastreabilidade de contaminação ============
   // Cenário fictício: 4 CIPs contaminados no Tanque de Fermentação 02 (um deles reavaliado),

@@ -227,7 +227,7 @@ const DASH_CORES = {
   grade: "#d7ded3",
   texto: "#4b5750",
 };
-const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c", "#5b5796", "#7a5a2e", "#2f6f8f", "#4f6d1f"];
+const DASH_CORES_TIPO = ["#1f4d3a", "#3c7a5c", "#2a4b57", "#4a7a8c", "#5b5796", "#7a5a2e", "#2f6f8f", "#4f6d1f", "#6b4f8a", "#8a4f5e"];
 
 function dashOpcoesBase() {
   return {

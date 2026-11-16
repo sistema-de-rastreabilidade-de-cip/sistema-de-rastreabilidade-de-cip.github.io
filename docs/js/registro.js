@@ -56,8 +56,11 @@ function criarSelectBbt(valorAtual) {
 // Lista do seletor principal: as Adegas quando o formulário veio da aba
 // Adega (ou quando o registro editado é de uma Adega); senão, a lista
 // oficial do formulário.
+// Só o Alcalino Clorado (lista TFM/HORAP/Trasfega) precisa trocar a lista
+// pelas adegas quando aberto pela aba Adega; os demais formulários da Adega
+// já têm a lista certa (adegas, Degás, Aldox, BBT).
 function seletorJaIncluiAdegas(tipoSeletor) {
-  return tipoSeletor === "adega" || tipoSeletor === "tfm_horap_trasfega_daw"; // v10
+  return tipoSeletor !== "tfm_horap_trasfega"; // v10
 }
 function listaParaSeletorPrincipal(tipoSeletor, valorAtual) {
   if (seletorJaIncluiAdegas(tipoSeletor)) return listaEquipamentosParaCampo(tipoSeletor);
@@ -101,11 +104,11 @@ function criarSelectEquipamento(idCampo, label, tipoSeletor, valorAtual, lista) 
 // Sem lista (ou com "Outro nome" permitido), mantém o campo livre, como antes.
 // O banco padroniza o nome e recusa nomes vazios/inválidos de qualquer forma.
 const VALOR_OUTRO_OPERADOR = "__outro__";
-function criarCampoOperador(valorAtual) {
+function criarCampoOperador(valorAtual, id = "nome_operador", rotulo = "Operador") {
   const ativos = (CIP_OPERADORES || []).filter((o) => o.ativo);
   const marca = '<span class="marca-obrigatorio" title="Campo obrigatório">*</span>';
   if (!ativos.length) {
-    return criarInputTopo("nome_operador", "Operador", "text", valorAtual, 'required maxlength="80" autocomplete="off"');
+    return criarInputTopo(id, rotulo, "text", valorAtual, 'required maxlength="80" autocomplete="off"');
   }
   const exigir = !!CIP_CONFIG.exigir_operador_cadastrado;
   const atualNaLista = valorAtual && ativos.some((o) => cipChaveNome(o.nome) === cipChaveNome(valorAtual));
@@ -114,20 +117,20 @@ function criarCampoOperador(valorAtual) {
     ? `<option value="${escaparHtml(valorAtual)}" selected>${escaparHtml(valorAtual)} (nome registrado)</option>` : "";
   return `
     <div class="campo">
-      <label for="nome_operador_lista">Operador ${marca}</label>
-      <select id="nome_operador_lista" required>
+      <label for="${id}_lista">${escaparHtml(rotulo)} ${marca}</label>
+      <select id="${id}_lista" required>
         <option value="">— selecione —</option>
         ${extraAtual}${opcoes}
         ${exigir ? "" : `<option value="${VALOR_OUTRO_OPERADOR}">Outro nome (não cadastrado)…</option>`}
       </select>
-      <input type="text" id="nome_operador" class="oculto" maxlength="80" autocomplete="off" placeholder="Digite o nome do operador" value="" />
+      <input type="text" id="${id}" class="oculto" maxlength="80" autocomplete="off" placeholder="Digite o nome do operador" value="" />
     </div>
   `;
 }
-function ligarCampoOperador() {
-  const lista = document.getElementById("nome_operador_lista");
+function ligarCampoOperador(id = "nome_operador") {
+  const lista = document.getElementById(`${id}_lista`);
   if (!lista) return;
-  const texto = document.getElementById("nome_operador");
+  const texto = document.getElementById(id);
   const sincronizar = () => {
     const outro = lista.value === VALOR_OUTRO_OPERADOR;
     texto.classList.toggle("oculto", !outro);
@@ -174,8 +177,42 @@ function renderizarCamposTopo(valoresIniciais = {}) {
   }
 
   html += criarCampoOperador(valoresIniciais.nome_operador);
+  html += criarCampoTurno(((valoresIniciais.dados || {}).operador_inicio) || "");
 
   container.innerHTML = html;
+}
+
+// v10 — CIP que passa de turno: um só envio com os dois nomes (decisão de
+// 16/11/2026). "Operador" é quem finalizou e preenche o formulário; quem
+// iniciou fica em dados.operador_inicio. O banco padroniza e valida o nome.
+function criarCampoTurno(inicioAtual) {
+  const marcado = !!inicioAtual;
+  return `
+    <div class="campo campo-turno">
+      <label class="rotulo-check"><input type="checkbox" id="passou_turno" ${marcado ? "checked" : ""} />
+        Este CIP passou de turno (foi iniciado por outro operador)</label>
+    </div>
+    <div id="bloco-operador-inicio" class="${marcado ? "" : "oculto"}">
+      ${criarCampoOperador(inicioAtual, "operador_inicio", "Operador que iniciou")}
+    </div>
+  `;
+}
+function ligarCampoTurno() {
+  const caixa = document.getElementById("passou_turno");
+  if (!caixa) return;
+  ligarCampoOperador("operador_inicio");
+  const bloco = document.getElementById("bloco-operador-inicio");
+  const rotuloFinal = document.querySelector('label[for="nome_operador_lista"], label[for="nome_operador"]');
+  const marcaFinal = rotuloFinal ? rotuloFinal.innerHTML.replace(/^[^<]*/, "") : "";
+  const sincronizar = () => {
+    const ligado = caixa.checked;
+    bloco.classList.toggle("oculto", !ligado);
+    // Campos escondidos ficam desabilitados para não travar a validação do navegador.
+    bloco.querySelectorAll("input, select").forEach((el) => { el.disabled = !ligado; });
+    if (rotuloFinal) rotuloFinal.innerHTML = (ligado ? "Operador que finalizou " : "Operador ") + marcaFinal;
+  };
+  caixa.addEventListener("change", sincronizar);
+  sincronizar();
 }
 
 function renderizarCamposDados(dadosIniciais = {}) {
@@ -248,6 +285,9 @@ function lerValoresDoFormulario() {
     const el = document.getElementById(`campo_${campo.key}`);
     dados[campo.key] = el.value.trim();
   });
+  const passouTurno = !!(document.getElementById("passou_turno") || {}).checked;
+  if (passouTurno) dados.operador_inicio = cipNormalizarNome(document.getElementById("operador_inicio").value);
+  topo.passou_turno = passouTurno;
 
   const observacoes_operador = document.getElementById("observacoes").value.trim() || null;
 
@@ -268,6 +308,12 @@ function validarCamposObrigatorios(valores) {
   if (CONFIG.temHoraFinal && !valores.hora_final) return "Informe a Hora Final.";
   if (!valores.nome_operador) return "Informe o nome do Operador.";
   if (!cipNomeValido(valores.nome_operador)) return "Nome do operador inválido: " + CIP_MSG_NOME_INVALIDO;
+  if (valores.passou_turno) {
+    const inicio = valores.dados.operador_inicio;
+    if (!inicio) return "Informe o Operador que iniciou o CIP (ou desmarque \"Este CIP passou de turno\").";
+    if (!cipNomeValido(inicio)) return "Nome do operador que iniciou inválido: " + CIP_MSG_NOME_INVALIDO;
+    if (cipChaveNome(inicio) === cipChaveNome(valores.nome_operador)) return "Quem iniciou e quem finalizou são a mesma pessoa: desmarque \"Este CIP passou de turno\".";
+  }
   return null;
 }
 
@@ -350,6 +396,7 @@ async function init() {
 
     renderizarCamposTopo(REGISTRO_ATUAL);
     ligarCampoOperador();
+    ligarCampoTurno();
     renderizarCamposDados(REGISTRO_ATUAL.dados || {});
     preencherObservacoes(REGISTRO_ATUAL.observacoes_operador);
 
@@ -359,6 +406,7 @@ async function init() {
     // Modo criação
     renderizarCamposTopo({});
     ligarCampoOperador();
+    ligarCampoTurno();
     renderizarCamposDados({});
   }
 
@@ -507,7 +555,7 @@ function mostrarResultadoParametros(registro, destino) {
   const fora = v.fora_da_faixa || 0;
   mostrarMensagem(fora ? "erro" : "sucesso", fora
     ? `Registro de CIP salvo. <strong>${fora} parâmetro(s) fora da faixa aceitável</strong> — confira abaixo. O supervisor verá o mesmo resultado na avaliação.`
-    : "Registro de CIP salvo. Todos os parâmetros com faixa cadastrada estão dentro da faixa.");
+    : "Registro de CIP salvo. Nenhum parâmetro fora da faixa — situação normal. Voltando em instantes…");
   const area = document.getElementById("resultado-parametros");
   area.innerHTML = `
     <section class="cartao-secao resultado-parametros">
@@ -520,6 +568,9 @@ function mostrarResultadoParametros(registro, destino) {
     </section>`;
   area.classList.remove("oculto");
   area.scrollIntoView({ block: "start" });
+  // Tudo normal: mostra o resultado e segue sozinho. Fora da faixa: espera
+  // o operador conferir e clicar em "Continuar".
+  if (!fora) setTimeout(() => (window.location.href = destino), 2500);
 }
 
 init();

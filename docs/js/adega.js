@@ -1,7 +1,8 @@
 // =====================================================================
 // Aba Adega (v10, modo geral): três procedimentos periódicos, sem separar
-// Adega A, B e D — CIP Alcalino (30 dias), CIP Alcalino Clorado (6 meses)
-// e CIP OSAN (BBT 01–12, periodicidade pendente de definição).
+// Adega A, B e D — CIP Alcalino (30 dias), CIP Alcalino Clorado (6 meses),
+// CIP OSAN (BBT 01–12, periodicidade pendente de definição), CIP Degás e
+// CIP Aldox (semanais).
 // Toda gravação passa pelas funções do banco (definir_periodicidade_adega,
 // definir_data_base_adega_geral, remover_data_base_adega_geral,
 // definir_dias_aviso_adega), que conferem o perfil e as regras no servidor.
@@ -13,6 +14,8 @@ const ADEGA_DESCRICAO = {
   alcalino: "Adega A, B ou D. Campos iguais aos do CIP TFM/HORAP/Trasfega/DAW.",
   alcalino_clorado: "Conta só o CIP Alcalino Clorado feito numa adega (A, B ou D); o mesmo tipo nos tanques de fermentação não entra aqui.",
   osam: "BBT escolhido na lista fixa BBT 01 a BBT 12.",
+  degas: "Degás. Soda cáustica semanal e esterilização após atingir 80 ºC no retorno (PO-JAC-FAB-030, Anexo 1).",
+  aldox: "Aldox. Soda cáustica semanal e esterilização após atingir 80 ºC no retorno (PO-JAC-FAB-029, Anexo 1).",
 };
 
 function adegaMensagem(tipo, texto) {

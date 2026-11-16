@@ -13,7 +13,7 @@
 --     guardam dados);
 --   * devolve vw_cip_registros e as funções de backup à definição da v8.1/v9.
 -- O que NÃO faz (de propósito, para não perder dados):
---   * não apaga registros de CIP Alcalino nem o valor 'alcalino' do tipo
+--   * não apaga registros de CIP Alcalino, Degás e Aldox nem esses valores do tipo
 --     de CIP (o PostgreSQL não remove valores de enum);
 --   * não apaga a coluna cip_registros.verificacao_parametros nem os
 --     limites do mapa de calor em cip_configuracao (ficam sem uso).
@@ -44,11 +44,16 @@ end
 $desfazer$;
 
 drop trigger if exists trg_cip_registros_verificar_parametros on public.cip_registros;
+drop trigger if exists trg_cip_registros_operador_inicio on public.cip_registros;
+drop function if exists public.cip_registros_operador_inicio();
+-- (os nomes de quem iniciou ficam em dados->>'operador_inicio' e são preservados)
 drop function if exists public.cip_verificar_parametros();
 drop function if exists public.definir_periodicidade_adega(public.tipo_cip_enum, integer, text, integer);
 drop function if exists public.definir_data_base_adega_geral(public.tipo_cip_enum, date);
 drop function if exists public.remover_data_base_adega_geral(public.tipo_cip_enum);
-drop function if exists public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean);
+drop function if exists public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean, text, text);
+-- cip_grupo_equipamento e cip_grupos_equipamento ficam: a regra de validação
+-- da tabela de faixas arquivada depende delas (funções sem dados, sem uso).
 drop function if exists public.definir_limites_mapa_calor(integer, integer);
 drop function if exists public.cip_registro_conta_adega(public.tipo_cip_enum, text);
 drop function if exists public.cip_extrair_numero(text);

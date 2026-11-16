@@ -8,22 +8,25 @@
 
 | Área | Versão atual (produção) | v10 |
 |---|---|---|
-| Painel do operador | 7 cartões, incluindo "CIP Completo" e "CIP OSAN" | 6 cartões. "CIP Completo" passa a se chamar **CIP TFM/HORAP/Trasfega/DAW**. OSAN e o novo CIP Alcalino ficam só na aba Adega |
+| Painel do operador | 7 cartões, incluindo "CIP Completo" e "CIP OSAN" | 6 cartões. "CIP Completo" passa a se chamar **CIP TFM/HORAP/Trasfega/DAW**. OSAN e os novos CIP Alcalino, CIP Degás e CIP Aldox ficam só na aba Adega |
 | Formulário TFM/HORAP/Trasfega/DAW | Tanques de fermentação + Linha de Trasfega | Mesma lista, mais **Adega A, Adega B e Adega D**. Campos iguais |
-| Aba Adega | Adega A e Adega B separadas; Alcalino Clorado a cada 6 meses e Completo a cada 12 meses | **Controle geral** (sem separar adegas): **CIP Alcalino** a cada 30 dias, **CIP Alcalino Clorado** a cada 6 meses e **CIP OSAN** (BBT 01 a 12) com **periodicidade pendente de definição** |
+| Aba Adega | Adega A e Adega B separadas; Alcalino Clorado a cada 6 meses e Completo a cada 12 meses | **Controle geral** (sem separar adegas): **CIP Alcalino** a cada 30 dias, **CIP Alcalino Clorado** a cada 6 meses, **CIP OSAN** (BBT 01 a 12) com **periodicidade pendente de definição**, **CIP Degás** e **CIP Aldox** semanais |
+| CIP Degás e CIP Aldox | não existiam | Tipos novos (PO-JAC-FAB-030 e PO-JAC-FAB-029). Campos montados a partir das colunas das tabelas Anexo 1 (decisão do usuário) |
 | CIP Alcalino | não existia | Tipo novo; campos iguais aos do CIP TFM/HORAP/Trasfega/DAW (decisão do usuário); equipamento Adega A, B ou D |
-| Faixas dos parâmetros | não existiam | Estrutura pronta, **tabela vazia**: a comparação só liga para os parâmetros que receberem faixa oficial |
+| Faixas dos parâmetros | não existiam | **59 faixas oficiais** das tabelas Anexo 1 (TQ Fermentação, TQs de Levedura, Adegas, BMF, Aldox e Degás), por tipo de CIP e grupo de equipamentos |
 | Contaminações | lista "CIPs contaminados" | Aba nova **Rastreabilidade de Contaminação**: mapa de calor, ranking, indicadores, histórico e filtros |
 
 ## Aba Adega (modo geral)
 
 - Cada procedimento é controlado pelo último registro válido do seu tipo.
-  - CIP Alcalino e OSAN: todos os registros do tipo contam.
+  - CIP Alcalino, OSAN, Degás e Aldox: todos os registros do tipo contam.
   - CIP Alcalino Clorado: contam só os registros feitos numa adega (A, B ou D). O mesmo tipo
     também é usado nos tanques de fermentação, e esses registros não entram aqui.
 - A periodicidade fica em `cip_adega_controles`, em dias ou meses, e o supervisor pode alterá-la.
   Sem periodicidade, o procedimento aparece como "Periodicidade pendente": sem data prevista e sem
   alerta. É o caso do OSAN, porque não havia regra aprovada.
+- Degás e Aldox: 7 dias, porque a coluna "SEMANAL — SODA" está marcada nas duas tabelas
+  (PO-JAC-FAB-030 e 029, Anexo 1). A coluna "QUINZENAL — SODA + SANITIZANTE" está vazia.
 - O aviso "Próximo do vencimento" usa a antecedência geral da Adega ou uma antecedência própria
   do procedimento, definida pelo supervisor. Em períodos curtos, quando as duas situações valem
   ao mesmo tempo, aparece a mais próxima: "Realizado" na primeira metade do prazo e "Próximo do
@@ -38,27 +41,88 @@
 
 ## Faixas aceitáveis dos parâmetros
 
-- `cip_parametros_faixas` guarda, para cada tipo de CIP e parâmetro, o mínimo e/ou o máximo, a
-  unidade e se a comparação está ativa. **A tabela começa vazia**: nenhum valor foi inventado.
-- O cadastro fica em Gestão → "Faixas aceitáveis dos parâmetros" e é feito só pelo supervisor.
-  Cada alteração vai para o histórico, que não pode ser alterado. Faixas não são apagadas: para
-  parar de comparar, basta desmarcar "Comparar".
-- Cada tipo tem as suas faixas. O OSAN e o CIP Alcalino usam os mesmos campos do
-  TFM/HORAP/Trasfega/DAW, mas as faixas de um não valem para os outros.
-- Ao gravar ou editar um registro, um gatilho no banco compara os valores e grava o resultado em
-  `cip_registros.verificacao_parametros`. O resultado guarda o parâmetro, o valor como foi
-  digitado, o número usado, o mínimo, o máximo, a unidade, a situação e a data. O usuário não
-  consegue forjar esse resultado. Os valores digitados (`dados`) nunca são alterados.
-  - Situações possíveis: dentro da faixa, abaixo do mínimo, acima do máximo, não preenchido ou
-    sem número para comparar.
-  - O número é o primeiro do texto, com vírgula ou ponto como decimal: "2,5%" vira 2,5. Separador
-    de milhar não é reconhecido ("1.200" vira 1,2).
-- **Operador:** depois de salvar, vê a tabela de verificação, com os parâmetros fora da faixa em
-  vermelho. Se o tipo de CIP não tem faixa, o fluxo continua como antes.
+- `cip_parametros_faixas` guarda, para cada tipo de CIP, parâmetro e **grupo de equipamentos**, o
+  mínimo e/ou o máximo, a unidade, o documento de origem e se a comparação está ativa. A faixa de
+  um grupo tem prioridade sobre a de "Todos os equipamentos".
+  - O grupo existe porque a mesma tabela traz limites diferentes por equipamento: a soda circula
+    30 ± 10 min nos tanques de fermentação e 60 ± 30 min na Linha de Trasfega.
+  - Grupos: tanques de fermentação, Linha de Trasfega (CIP 7), Adega A/B/D, membranas do BMF,
+    UBT/UBL/FBT/FBL, tanques de aditivos do BMF, linhas de maturada/envio BMF/envio adegas e
+    linha de blendagem.
+- **Carga inicial:** 59 faixas oficiais das tabelas "Anexo 1" enviadas em 16/11/2026, cada uma com
+  o documento de origem.
+  - "± x" virou mínimo e máximo.
+  - Decisões do usuário: a concentração vale para o valor inicial e o final; o "Sanitizante" das
+    tabelas de Fermentação e Levedura corresponde aos campos de Ácido; o pH não é comparado.
+  - Temperatura "ambiente" não entra, porque não é um número.
+- O supervisor ajusta as faixas em Gestão → "Faixas aceitáveis dos parâmetros". Cada alteração vai
+  para o histórico, que não pode ser alterado. Faixas não são apagadas: para parar de comparar,
+  basta desmarcar "Comparar".
+- Ao gravar ou editar um registro (inclusive ao trocar o equipamento), um gatilho no banco compara
+  os valores e grava o resultado em `cip_registros.verificacao_parametros`.
+  - O resultado guarda o parâmetro, o valor como foi digitado, o número usado, o mínimo, o máximo,
+    a unidade, o grupo, a origem, a situação e a data.
+  - O usuário não consegue forjar esse resultado, e os valores digitados (`dados`) nunca são
+    alterados.
+  - Situações possíveis: dentro da faixa, abaixo do mínimo, acima do máximo, não preenchido ou sem
+    número para comparar.
+  - O número é o primeiro do texto. A vírgula é decimal; o ponto é decimal ("2.5") ou de milhar
+    quando seguido de grupos de 3 dígitos ("6.500 ppm" vira 6500).
+- **Operador:** depois de salvar, vê a tabela de verificação. Se algum parâmetro ficou fora da
+  faixa, ele aparece em vermelho e a tela espera o "Continuar". Com tudo normal, a tela mostra
+  "situação normal" e segue sozinha. Tipo de CIP sem faixa: o fluxo continua como antes.
 - **Supervisor:** vê a mesma tabela no detalhe do registro, junto da avaliação.
 - **Relatórios:** o CSV de registros ganha a coluna "Verificação dos parâmetros".
-- Registros gravados antes de existir faixa ficam sem verificação. Os resultados antigos não são
-  recalculados quando uma faixa muda.
+- Os resultados antigos não são recalculados quando uma faixa muda.
+- **Backup:** as faixas guardam os números sem zeros à direita (2 em vez de 2,0), porque o arquivo
+  baixado passa pelo JSON do navegador; sem isso o checksum do arquivo não conferia.
+
+### Faixas oficiais carregadas
+
+| Formulário | Grupo de equipamentos | Parâmetro (inicial e final) | Faixa | Origem |
+|---|---|---|---|---|
+| TFM/HORAP/Trasfega/DAW | Tanques de fermentação | Soda / Ácido (Sanitizante) / Divosan | 2,0–3,0 % · 2,0–2,5 % · 0,20–0,30 %; tempos 20–40 min | TQs de Fermentação, Anexo 1, rev. 22 |
+| TFM/HORAP/Trasfega/DAW | Linha de Trasfega (CIP 7) | Soda | 2,0–3,0 %; 30–90 min | idem |
+| TFM/HORAP/Trasfega/DAW | Adega A/B/D | Soda | 2,0–3,0 %; 20–40 min | PO-JAC-FAB-006, Anexo 1, rev. 10 (Tanques Pressão CIP Completo) |
+| Alcalino Clorado | Tanques de fermentação | Alcalina clorada / Ácido | 1,5–2,5 %, 100–140 min · 2,0–2,5 %, 20–40 min | TQs de Fermentação, rev. 22 |
+| Alcalino Clorado | Adega A/B/D | Alcalina clorada | 2,0–3,0 %; 100–140 min | PO-JAC-FAB-006, rev. 10 (CIP Clorado nos equipamentos da Adega) |
+| CIP Alcalino | Todos (Adega) | Soda | 2,0–3,0 %; 20–40 min | PO-JAC-FAB-006, rev. 10 (Tanques Pressão CIP Completo, mensal) |
+| Tanque de Levedura | Todos | Soda / Ácido / Alcalina clorada | 2,0–3,0 % · 2,0–2,5 % · 1,5–2,5 %; 20–40 / 20–40 / 100–140 min | PO-JAC-FAB-032, Anexo 1, rev. 0 |
+| BMF | Membranas | Soda / Divos X5 / Ácido nítrico | inicial 2,0–4,0 %, final 1,0–3,0 % · inicial 4500–8500 ppm, final 500–4500 ppm · 0,2–0,6 % | PO-JAC-FAB-024, Anexo I, rev. 4 (finais: Anexo 3) |
+| BMF | UBT/UBL/FBT/FBL | Ácido nítrico | 0,8–1,2 % | idem |
+| BMF | Tanques de aditivos | Ácido nítrico | 0,5–1,5 % | idem |
+| BMF | Linhas de maturada/envio BMF/envio adegas; linha de blendagem | Soda / Ácido nítrico | 2,0–3,0 % · 0,8–1,2 % | idem |
+| Degás / Aldox | Todos | Soda; esterilização | 2,0–3,0 %, 30–90 min; retorno ≥ 80 ºC por ≥ 30 min | PO-JAC-FAB-030 / 029, Anexo 1, rev. 0 |
+
+Sem faixa por falta de tabela: CIP Linha de Recuperação de Levedura, CIP Filtração — Filtro 3 e
+OSAN. A tabela de Adegas cita os desinfetantes OSA-N e Uniforce, mas os formulários não têm
+campos para eles. No BMF, o formulário oficial (Anexo 3) já traz faixas próprias para soda e
+Divos finais, e essas foram mantidas.
+
+## CIP que passa de turno
+
+Pedido de 16/11/2026: o operador começa o CIP num turno e não dá tempo de terminar. Decisão do
+usuário: **um só envio com os dois nomes**.
+
+- Quem termina preenche o formulário normalmente. O campo "Operador" é quem finalizou.
+- Ao marcar "Este CIP passou de turno (foi iniciado por outro operador)", aparece "Operador que
+  iniciou" (mesma lista de operadores, com "Outro nome" quando permitido), e o campo Operador
+  passa a se chamar "Operador que finalizou".
+- O nome de quem iniciou fica em `cip_registros.dados->>'operador_inicio'`. Não há coluna nova e
+  `editar_registro_cip` não muda: editar, histórico de edições, backup e site em produção
+  continuam iguais.
+- O gatilho `trg_cip_registros_operador_inicio` aplica as mesmas regras do campo Operador:
+  - padroniza o nome e recusa nomes inválidos;
+  - usa a grafia oficial do cadastro;
+  - com "exigir operador cadastrado", só aceita nomes ativos da lista;
+  - recusa a mesma pessoa nos dois campos;
+  - campo vazio não grava a chave.
+- Onde aparece:
+  - detalhe do registro: "Operador que iniciou" e "Operador que finalizou";
+  - Histórico e Rastreabilidade: "Nome (iniciado por Nome)";
+  - CSV: coluna "Operador que iniciou (troca de turno)";
+  - histórico de edições: a alteração aparece como "Operador que iniciou (troca de turno)".
+- Desfazer a v10 remove o gatilho e mantém os nomes já gravados em `dados`.
 
 ## Rastreabilidade de Contaminação
 
@@ -87,7 +151,7 @@
 
 | Arquivo | O que faz |
 |---|---|
-| `supabase/migrations/20261113120000_cip_v10_tipo_alcalino.sql` | Acrescenta o tipo `alcalino`. Aplicado sozinho, porque o PostgreSQL não usa um valor novo de enum na mesma transação |
+| `supabase/migrations/20261113120000_cip_v10_tipo_alcalino.sql` | Acrescenta os tipos `alcalino`, `degas` e `aldox`. Aplicado sozinho, porque o PostgreSQL não usa um valor novo de enum na mesma transação |
 | `supabase/migrations/20261113120100_cip_v10_adega_faixas_mapa.sql` | Controles e datas-base da Adega, faixas, verificação, limites do mapa, data futura do Alcalino, coluna nova na `vw_cip_registros`, backup com as tabelas novas |
 | `supabase/rollback/20261113120100_cip_v10_desfazer.sql` | Arquiva as tabelas da v10 num schema `cip_arquivo_v10_<data>`, sem apagar dados, e devolve view e funções de backup à v9 |
 
@@ -117,10 +181,16 @@ agora recusa a execução enquanto a v10 estiver aplicada, porque a v10 usa uma 
 
 ## Pendências
 
-- **Faixas oficiais** de cada parâmetro e tipo de CIP. Até lá a comparação fica desligada.
 - **Periodicidade do OSAN** (hoje pendente).
 - **Antecedência do aviso do CIP Alcalino** (ver acima).
 - **Limites do mapa de calor**, se a coordenação quiser critério fixo.
+- **Tabelas que faltam:** Linha de Recuperação de Levedura (PO-JAC-FAB-031) e Filtro 3
+  (PO-JAC-FAB-005), para cadastrar as faixas desses formulários.
+- **OSA-N e Uniforce (Adegas):** decidir se viram campos nos formulários da Adega ou do OSAN.
+- **Linha de Filtração — BFILTRAÇÃO:** foi considerada "envio BMF" na faixa das linhas de
+  maturada. Confirmar.
+- **Formulários de Degás e Aldox:** campos montados a partir da tabela Anexo 1; conferir quando
+  houver o formulário oficial de registro.
 - **"ADEGA A/B/D"**: o pedido escreve em maiúsculas, mas o sistema usa "Adega A/B/D", o mesmo
   padrão dos equipamentos que já existem, para os registros novos e antigos da mesma adega
   coincidirem.

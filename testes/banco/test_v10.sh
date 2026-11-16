@@ -46,9 +46,9 @@ ver "OSAN continua exigindo BBT" "$(E "$OPE $INS values ('osam','X',current_date
 ver "OSAN com BBT 05 grava e o equipamento é o BBT" "$(E "$OPE insert into cip_registros (tipo_cip, bbt, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('osam','BBT 05','x',current_date,'08:00','09:00','Ana Lima','{}')" >/dev/null; Q "select equipamento from cip_registros where tipo_cip='osam' and bbt='BBT 05'")" "BBT 05"
 
 echo "== Controles da Adega (modo geral) =="
-ver "três procedimentos, com as periodicidades informadas" "$(Q "select string_agg(tipo_cip||':'||coalesce(periodo_quantidade::text,'-')||coalesce(periodo_unidade,''), ',' order by ordem) from cip_adega_controles")" "alcalino:30dias,alcalino_clorado:6meses,osam:-"
+ver "cinco procedimentos, com as periodicidades informadas e das tabelas" "$(Q "select string_agg(tipo_cip||':'||coalesce(periodo_quantidade::text,'-')||coalesce(periodo_unidade,''), ',' order by ordem) from cip_adega_controles")" "alcalino:30dias,alcalino_clorado:6meses,osam:-,degas:7dias,aldox:7dias"
 ver "OSAN sem periodicidade inventada" "$(Q "select periodo_quantidade is null and periodo_unidade is null from cip_adega_controles where tipo_cip='osam'")" "t"
-ver "carga inicial registrada na própria linha; histórico começa vazio" "$(Q "select count(*) from cip_adega_controles where atualizado_por_nome='Migração CIP v10'")-$(Q "select count(*) from cip_adega_controles_historico")" "3-0"
+ver "carga inicial registrada na própria linha; histórico começa vazio" "$(Q "select count(*) from cip_adega_controles where atualizado_por_nome='Migração CIP v10'")-$(Q "select count(*) from cip_adega_controles_historico")" "5-0"
 ver "operador lê os controles" "$(E "$OPE select count(*) from cip_adega_controles")" "ok"
 ver "anônimo não lê os controles" "$(E "$ANON select count(*) from cip_adega_controles")" "42501"
 ver "operador não altera periodicidade" "$(E "$OPE select definir_periodicidade_adega('osam', 30, 'dias')")" "42501"
@@ -72,44 +72,79 @@ ver "remover data-base" "$(E "$ADM select remover_data_base_adega_geral('alcalin
 ver "eventos de data-base são só inclusão" "$(E "delete from cip_adega_datas_base")" "42501"
 "${P[@]}" -d $DB -c "$INS values ('alcalino_clorado','Adega B',current_date-1,'08:00','09:00','Ana Lima','{}')" >/dev/null
 ver "Alcalino Clorado na Adega B conta para a Adega" "$(E "$ADM select definir_data_base_adega_geral('alcalino_clorado', current_date-200)")" "23514"
-ver "regra de contagem: alcalino_clorado só em adega" "$(Q "select string_agg(cip_registro_conta_adega(t::tipo_cip_enum, e)::text, ',') from (values ('alcalino_clorado','Adega D'),('alcalino_clorado','Tanque de Fermentação 08'),('alcalino','Adega A'),('osam','BBT 01'),('completo','Adega A')) v(t,e)")" "true,false,true,true,false"
+ver "regra de contagem: alcalino_clorado só em adega" "$(Q "select string_agg(cip_registro_conta_adega(t::tipo_cip_enum, e)::text, ',') from (values ('alcalino_clorado','Adega D'),('alcalino_clorado','Tanque de Fermentação 08'),('alcalino','Adega A'),('osam','BBT 01'),('completo','Adega A'),('degas','Degas — DEGAS'),('aldox','Aldox — Aldox')) v(t,e)")" "true,false,true,true,false,true,true"
 
-echo "== Faixas dos parâmetros =="
-ver "tabela de faixas nasce vazia (nenhum limite inventado)" "$(Q "select count(*) from cip_parametros_faixas")" "0"
-ver "sem faixa: registro sem verificação (comparação desligada)" "$(Q "select count(*) from cip_registros where verificacao_parametros is not null")" "0"
-ver "operador não define faixa" "$(E "$OPE select definir_faixa_parametro('completo','conc_inicial_soda',2,4,'%',true)")" "42501"
-ver "faixa sem limites recusada" "$(E "$ADM select definir_faixa_parametro('completo','conc_inicial_soda',null,null,'%',true)")" "22023"
-ver "mínimo maior que máximo recusado" "$(E "$ADM select definir_faixa_parametro('completo','conc_inicial_soda',5,4,'%',true)")" "22023"
+echo "== CIP Degás e CIP Aldox =="
+ver "tipos degas e aldox existem" "$(Q "select count(*) from pg_enum where enumlabel in ('degas','aldox')")" "2"
+ver "operador grava CIP Degás e CIP Aldox" "$(E "$OPE $INS values ('degas','Degas — DEGAS',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"2,5%\",\"esterilizacao_temperatura\":\"75 °C\",\"esterilizacao_tempo\":\"35\"}'), ('aldox','Aldox — Aldox',current_date,'08:00','09:00','Ana Lima','{\"tempo_circulacao_soda\":\"100 min\"}')")" "ok"
+ver "data futura recusada no Degás" "$(E "$OPE $INS values ('degas','Degas — DEGAS',current_date+1,'08:00','09:00','Ana Lima','{}')")" "23514"
+
+echo "== Faixas dos parâmetros (carga oficial das tabelas Anexo 1) =="
+ver "59 faixas oficiais carregadas, todas com documento de origem" "$(Q "select count(*)||'/'||count(fonte) from cip_parametros_faixas")" "59/59"
+ver "histórico registra a carga inicial" "$(Q "select count(*) from cip_parametros_faixas_historico")" "59"
+ver "faixas por tipo" "$(Q "select string_agg(tipo_cip||'='||n, ',' order by tipo_cip::text) from (select tipo_cip, count(*) n from cip_parametros_faixas group by 1) x")" "alcalino=3,alcalino_clorado=9,aldox=5,completo=15,degas=5,filtracao_bmf=13,tanque_levedura=9"
+F() { Q "select coalesce(minimo::text,'-')||'..'||coalesce(maximo::text,'-')||' '||unidade from cip_parametros_faixas where tipo_cip='$1' and campo='$2' and grupo_equipamento='$3'"; }
+ver "TQ Fermentação: soda 2,5 ± 0,5 % → 2,0 a 3,0" "$(F completo conc_inicial_soda tanques_fermentacao)" "2..3 %"
+ver "TQ Fermentação: sanitizante = ácido, 2,0 a 2,5 %" "$(F completo conc_final_acido tanques_fermentacao)" "2..2.5 %"
+ver "TQ Fermentação: Divosan 0,25 ± 0,05 %" "$(F completo conc_inicial_divosan tanques_fermentacao)" "0.2..0.3 %"
+ver "Trasfega (CIP 7): soda 60 ± 30 min" "$(F completo tempo_circulacao_soda trasfega)" "30..90 min"
+ver "Alcalina clorada: tanques 2 ± 0,5 % e Adega 2,5 ± 0,5 %" "$(F alcalino_clorado conc_inicial tanques_fermentacao)/$(F alcalino_clorado conc_inicial adega)" "1.5..2.5 %/2..3 %"
+ver "Alcalina clorada: 120 ± 20 min" "$(F alcalino_clorado tempo_circulacao tanques_fermentacao)" "100..140 min"
+ver "BMF membranas: Divos X5 6.500 ± 2.000 ppm" "$(F filtracao_bmf bmf_conc_inicial_divos bmf_membranas)" "4500..8500 ppm"
+ver "BMF: ácido nítrico 0,4 ± 0,2 (membranas), 1,0 ± 0,2 (UBT/FBT), 1,0 ± 0,5 (aditivos)" "$(F filtracao_bmf bmf_conc_inicial_acido bmf_membranas)/$(F filtracao_bmf bmf_conc_inicial_acido bmf_tanques_linhas)/$(F filtracao_bmf bmf_conc_inicial_acido bmf_aditivos)" "0.2..0.6 %/0.8..1.2 %/0.5..1.5 %"
+ver "Degás e Aldox: esterilização a partir de 80 ºC, por 30 min" "$(F degas esterilizacao_temperatura todos)/$(F aldox esterilizacao_tempo todos)" "80..- °C/30..- min"
+ver "pH não é comparado (decisão do usuário)" "$(Q "select count(*) from cip_parametros_faixas where campo like '%ph%'")" "0"
+ver "sem tabela enviada: Linha de Recuperação, Filtro 3 e OSAN sem faixa" "$(Q "select count(*) from cip_parametros_faixas where tipo_cip in ('linha_recuperacao_levedura','filtracao_filtro3','osam')")" "0"
+ver "operador não define faixa" "$(E "$OPE select definir_faixa_parametro('completo','pressao',null,3,'bar',true)")" "42501"
+ver "faixa sem limites recusada" "$(E "$ADM select definir_faixa_parametro('completo','pressao',null,null,'bar',true)")" "22023"
+ver "mínimo maior que máximo recusado" "$(E "$ADM select definir_faixa_parametro('completo','pressao',5,4,'bar',true)")" "22023"
 ver "parâmetro com nome inválido recusado" "$(E "$ADM select definir_faixa_parametro('completo','Conc Soda; drop',1,4,'%',true)")" "22023"
-# Valores FICTÍCIOS só para o teste (nunca em produção).
-ver "supervisor cadastra faixa fictícia de teste" "$(E "$ADM select definir_faixa_parametro('completo','conc_inicial_soda',2,4,'%',true); select definir_faixa_parametro('completo','pressao',null,3,'bar',true)")" "ok"
+ver "grupo de equipamentos inválido recusado" "$(E "$ADM select definir_faixa_parametro('completo','pressao',null,3,'bar',true,'qualquer')")" "22023"
 "${P[@]}" -d $DB >/dev/null 2>&1 <<SQL
 begin; $OPE
-$INS values ('completo','Tanque de Fermentação 51',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"9%","pressao":"2,5 bar"}');
-$INS values ('completo','Tanque de Fermentação 52',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"1,5 %","pressao":""}');
-$INS values ('completo','Tanque de Fermentação 53',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"3","pressao":"ok"}');
+$INS values ('completo','Tanque de Fermentação 51',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"9%","conc_final_soda":"2,5%","tempo_circulacao_soda":"30 min"}');
+$INS values ('completo','Tanque de Fermentação 52',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"1,5 %","conc_final_soda":""}');
+$INS values ('completo','Tanque de Fermentação 53',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"3","conc_final_soda":"ok"}');
+$INS values ('completo','Linha de Trasfega',current_date,'08:00','09:00','Ana Lima','{"tempo_circulacao_soda":"60 min"}');
+$INS values ('completo','Adega D',current_date,'08:00','09:00','Ana Lima','{"tempo_circulacao_soda":"60 min"}');
+$INS values ('filtracao_bmf','Filtro de Cerveja de Membrana — BMF',current_date,'08:00','09:00','Ana Lima','{"bmf_conc_inicial_divos":"6.500 ppm","bmf_conc_inicial_acido":"0,5%"}');
+$INS values ('filtracao_bmf','Tanque de Cerveja Maturada — UBT',current_date,'08:00','09:00','Ana Lima','{"bmf_conc_inicial_acido":"0,5%"}');
+$INS values ('filtracao_bmf','Tanque de Cerveja a Filtrar — PCM',current_date,'08:00','09:00','Ana Lima','{"bmf_conc_inicial_acido":"0,5%"}');
 insert into cip_registros (tipo_cip, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados, verificacao_parametros)
 values ('completo','Tanque de Fermentação 54',current_date,'08:00','09:00','Ana Lima','{"conc_inicial_soda":"99"}','{"fora_da_faixa":0,"itens":[]}');
 commit;
 SQL
-V() { Q "select (select string_agg(i->>'campo'||'='||(i->>'situacao'), ',' order by i->>'campo') from jsonb_array_elements(verificacao_parametros->'itens') i)||' fora='||(verificacao_parametros->>'fora_da_faixa') from cip_registros where equipamento='$1' and tipo_cip='completo'"; }
-ver "acima do máximo detectado; pressão dentro" "$(V 'Tanque de Fermentação 51')" "conc_inicial_soda=acima,pressao=dentro fora=1"
-ver "abaixo do mínimo; campo vazio = não preenchido" "$(V 'Tanque de Fermentação 52')" "conc_inicial_soda=abaixo,pressao=sem_valor fora=1"
-ver "dentro da faixa; texto sem número não é comparado" "$(V 'Tanque de Fermentação 53')" "conc_inicial_soda=dentro,pressao=nao_numerico fora=0"
-ver "operador não consegue forjar o resultado" "$(V 'Tanque de Fermentação 54')" "conc_inicial_soda=acima,pressao=sem_valor fora=1"
+S() { Q "select coalesce((select i->>'situacao' from cip_registros r, jsonb_array_elements(r.verificacao_parametros->'itens') i where r.equipamento='$1' and i->>'campo'='$2' order by r.criado_em desc limit 1),'—')"; }
+FORA() { Q "select coalesce(verificacao_parametros->>'fora_da_faixa','sem verificação') from cip_registros where equipamento='$1' order by criado_em desc limit 1"; }
+ver "acima do máximo detectado; final e tempo dentro" "$(S 'Tanque de Fermentação 51' conc_inicial_soda)/$(S 'Tanque de Fermentação 51' conc_final_soda)/$(S 'Tanque de Fermentação 51' tempo_circulacao_soda)/$(FORA 'Tanque de Fermentação 51')" "acima/dentro/dentro/1"
+ver "concentração final também é comparada (decisão do usuário)" "$(Q "select count(*) from cip_parametros_faixas where campo like 'conc_final%' or campo like 'bmf_conc_final%'")" "18"
+ver "abaixo do mínimo; campo vazio = não preenchido" "$(S 'Tanque de Fermentação 52' conc_inicial_soda)/$(S 'Tanque de Fermentação 52' conc_final_soda)" "abaixo/sem_valor"
+ver "dentro da faixa; texto sem número não é comparado" "$(S 'Tanque de Fermentação 53' conc_inicial_soda)/$(S 'Tanque de Fermentação 53' conc_final_soda)/$(FORA 'Tanque de Fermentação 53')" "dentro/nao_numerico/0"
+ver "mesmo valor, outro equipamento: 60 min dentro na Trasfega e acima na Adega" "$(S 'Linha de Trasfega' tempo_circulacao_soda)/$(S 'Adega D' tempo_circulacao_soda)" "dentro/acima"
+ver "faixa de um grupo não vale para outro (Divosan só nos tanques)" "$(S 'Adega D' conc_inicial_divosan)/$(S 'Tanque de Fermentação 51' conc_inicial_divosan)" "—/sem_valor"
+ver "BMF: '6.500 ppm' lido como 6500 (dentro); ácido 0,5 dentro nas membranas e abaixo no UBT" "$(S 'Filtro de Cerveja de Membrana — BMF' bmf_conc_inicial_divos)/$(S 'Filtro de Cerveja de Membrana — BMF' bmf_conc_inicial_acido)/$(S 'Tanque de Cerveja Maturada — UBT' bmf_conc_inicial_acido)" "dentro/dentro/abaixo"
+ver "equipamento sem faixa na tabela (PCM): sem verificação" "$(FORA 'Tanque de Cerveja a Filtrar — PCM')" "sem verificação"
+ver "Degás: esterilização a 75 ºC abaixo de 80; 35 min dentro" "$(S 'Degas — DEGAS' esterilizacao_temperatura)/$(S 'Degas — DEGAS' esterilizacao_tempo)/$(S 'Degas — DEGAS' conc_inicial_soda)" "abaixo/dentro/dentro"
+ver "Aldox: 100 min acima de 60 ± 30" "$(S 'Aldox — Aldox' tempo_circulacao_soda)" "acima"
+ver "operador não consegue forjar o resultado" "$(S 'Tanque de Fermentação 54' conc_inicial_soda)/$(FORA 'Tanque de Fermentação 54')" "acima/1"
 ver "valores digitados preservados exatamente" "$(Q "select dados->>'conc_inicial_soda' from cip_registros where equipamento='Tanque de Fermentação 52'")" "1,5 %"
-ver "resultado guarda valor, número, limites e unidade" "$(Q "select i->>'valor'||'|'||(i->>'numero')||'|'||coalesce(i->>'minimo','-')||'|'||(i->>'maximo')||'|'||(i->>'unidade') from cip_registros r, jsonb_array_elements(r.verificacao_parametros->'itens') i where r.equipamento='Tanque de Fermentação 51' and i->>'campo'='conc_inicial_soda'")" "9%|9|2|4|%"
-ver "faixa do formulário TFM/HORAP/Trasfega/DAW não vale para OSAN nem Alcalino" "$(E "$OPE insert into cip_registros (tipo_cip, bbt, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('osam','BBT 06','x',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"9%\"}'); $INS values ('alcalino','Adega A',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"9%\"}')" >/dev/null; Q "select count(*) from cip_registros where tipo_cip in ('osam','alcalino') and verificacao_parametros is not null")" "0"
+ver "resultado guarda valor, número, limites, unidade, grupo e origem" "$(Q "select i->>'valor'||'|'||(i->>'numero')||'|'||(i->>'minimo')||'|'||(i->>'maximo')||'|'||(i->>'unidade')||'|'||(i->>'grupo_equipamento')||'|'||left(i->>'fonte',17) from cip_registros r, jsonb_array_elements(r.verificacao_parametros->'itens') i where r.equipamento='Tanque de Fermentação 51' and i->>'campo'='conc_inicial_soda'")" "9%|9|2|3|%|tanques_fermentacao|TQs de Fermentaçã"
+ver "faixas do TFM/HORAP/Trasfega/DAW não valem para OSAN" "$(E "$OPE insert into cip_registros (tipo_cip, bbt, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('osam','BBT 06','x',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"9%\"}')" >/dev/null; FORA 'BBT 06')" "sem verificação"
 ver "view vw_cip_registros traz a verificação" "$(Q "select verificacao_parametros->>'fora_da_faixa' from vw_cip_registros where equipamento='Tanque de Fermentação 51'")" "1"
 ID1=$(Q "select id from cip_registros where equipamento='Tanque de Fermentação 51'")
-ver "edição que corrige o valor recalcula a verificação" "$(E "$OPE select editar_registro_cip('$ID1','Tanque de Fermentação 51',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"3%\",\"pressao\":\"2,5 bar\"}'::jsonb,null,'Concentração anotada errada no papel','Ana Lima')" >/dev/null; V 'Tanque de Fermentação 51')" "conc_inicial_soda=dentro,pressao=dentro fora=0"
+ver "edição que corrige o valor recalcula a verificação" "$(E "$OPE select editar_registro_cip('$ID1','Tanque de Fermentação 51',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"2,8%\",\"conc_final_soda\":\"2,5%\",\"tempo_circulacao_soda\":\"30 min\"}'::jsonb,null,'Concentração anotada errada no papel','Ana Lima')" >/dev/null; S 'Tanque de Fermentação 51' conc_inicial_soda)/$(FORA 'Tanque de Fermentação 51')" "dentro/0"
 ver "a edição guarda o valor anterior no histórico" "$(Q "select valores_anteriores->'dados'->>'conc_inicial_soda' from cip_edicoes where registro_id='$ID1'")" "9%"
-ver "faixa desativada deixa de ser comparada" "$(E "$ADM select definir_faixa_parametro('completo','pressao',null,3,'bar',false)" >/dev/null; E "$OPE $INS values ('completo','Tanque de Fermentação 55',current_date,'08:00','09:00','Ana Lima','{\"pressao\":\"9\",\"conc_inicial_soda\":\"3\"}')" >/dev/null; V 'Tanque de Fermentação 55')" "conc_inicial_soda=dentro fora=0"
-ver "registros antigos não são recalculados ao mudar a faixa" "$(V 'Tanque de Fermentação 52')" "conc_inicial_soda=abaixo,pressao=sem_valor fora=1"
+IDA=$(Q "select id from cip_registros where equipamento='Adega D' and tipo_cip='completo' and dados ? 'tempo_circulacao_soda'")
+ver "trocar o equipamento na edição aplica as faixas do novo grupo" "$(E "$OPE select editar_registro_cip('$IDA','Linha de Trasfega',current_date,'08:00','09:00','Ana Lima','{\"tempo_circulacao_soda\":\"60 min\"}'::jsonb,null,'Equipamento selecionado errado','Ana Lima')" >/dev/null; Q "select i->>'situacao' from cip_registros r, jsonb_array_elements(r.verificacao_parametros->'itens') i where r.id='$IDA' and i->>'campo'='tempo_circulacao_soda'")" "dentro"
+# Faixas FICTÍCIAS só para o teste (nunca em produção): grupo 'todos' e prioridade do grupo.
+ver "faixa fictícia de 'todos' vale para qualquer equipamento do tipo" "$(E "$ADM select definir_faixa_parametro('completo','pressao',null,3,'bar',true,'todos','Teste')" >/dev/null; E "$OPE $INS values ('completo','Tanque de Fermentação 55',current_date,'08:00','09:00','Ana Lima','{\"pressao\":\"9\"}'), ('completo','Adega B',current_date,'08:00','09:00','Ana Lima','{\"pressao\":\"9\"}')" >/dev/null; S 'Tanque de Fermentação 55' pressao)/$(S 'Adega B' pressao)" "acima/acima"
+ver "faixa do grupo tem prioridade sobre a de 'todos'" "$(E "$ADM select definir_faixa_parametro('completo','conc_inicial_soda',0,100,'%',true,'todos','Teste')" >/dev/null; E "$OPE $INS values ('completo','Tanque de Fermentação 56',current_date,'08:00','09:00','Ana Lima','{\"conc_inicial_soda\":\"9%\"}')" >/dev/null; S 'Tanque de Fermentação 56' conc_inicial_soda)" "acima"
+ver "faixa desativada deixa de ser comparada" "$(E "$ADM select definir_faixa_parametro('completo','pressao',null,3,'bar',false,'todos')" >/dev/null; E "$OPE $INS values ('completo','Tanque de Fermentação 57',current_date,'08:00','09:00','Ana Lima','{\"pressao\":\"9\"}')" >/dev/null; S 'Tanque de Fermentação 57' pressao)" "—"
+ver "registros antigos não são recalculados ao mudar a faixa" "$(S 'Tanque de Fermentação 55' pressao)/$(S 'Tanque de Fermentação 52' conc_inicial_soda)" "acima/abaixo"
 ver "faixas não podem ser apagadas" "$(E "delete from cip_parametros_faixas")" "42501"
-ver "histórico de faixas imutável e completo" "$(Q "select count(*) from cip_parametros_faixas_historico")-$(E "delete from cip_parametros_faixas_historico")" "3-42501"
+ver "histórico de faixas imutável e completo" "$(Q "select count(*) from cip_parametros_faixas_historico")-$(E "delete from cip_parametros_faixas_historico")" "62-42501"
 ver "operador lê faixas; anônimo não" "$(E "$OPE select count(*) from cip_parametros_faixas")-$(E "$ANON select count(*) from cip_parametros_faixas")" "ok-42501"
-ver "extração do número: vírgula, ponto, unidade, negativo, sem número" "$(Q "select string_agg(coalesce(cip_extrair_numero(t)::text,'null'), ',') from unnest(array['2,5%','4500 ppm','80 °C','-1.5','abc','']) t")" "2.5,4500,80,-1.5,null,null"
+ver "extração do número: vírgula, ponto decimal, ponto de milhar, unidade, negativo, sem número" "$(Q "select string_agg(coalesce(cip_extrair_numero(t)::text,'null'), ',') from unnest(array['2,5%','4500 ppm','6.500 ppm','2.5','80 °C','-1.5','abc','']) t")" "2.5,4500,6500,2.5,80,-1.5,null,null"
 
 echo "== Rastreabilidade de contaminação =="
 R=$(Q "select id from cip_registros where equipamento='Tanque de Fermentação 53'")
@@ -139,6 +174,22 @@ bash recriar.sh $DB2 todas >/dev/null || exit 1
 ver "restauração num banco novo traz registros e verificações idênticos" "$(DB=$DB2 Q "select md5(string_agg(id::text||dados::text||coalesce(verificacao_parametros::text,''), '|' order by id)) from cip_registros")" "$(Q "select md5(string_agg(id::text||dados::text||coalesce(verificacao_parametros::text,''), '|' order by id)) from cip_registros")"
 ver "restauração traz faixas e históricos" "$(DB=$DB2 Q "select (select count(*) from cip_parametros_faixas)||'/'||(select count(*) from cip_parametros_faixas_historico)||'/'||(select count(*) from cip_adega_controles_historico)")" "$(Q "select (select count(*) from cip_parametros_faixas)||'/'||(select count(*) from cip_parametros_faixas_historico)||'/'||(select count(*) from cip_adega_controles_historico)")"
 
+echo "== CIP que passa de turno (quem iniciou e quem finalizou) =="
+TT="insert into cip_registros (tipo_cip, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('completo','Tanque de Fermentação 57',current_date,'22:00','02:00'"
+ver "nome de quem iniciou é padronizado" "$(E "$OPE $TT,'Ana Lima','{\"operador_inicio\":\"  bruno   COSTA \"}')" >/dev/null; Q "select dados->>'operador_inicio' from cip_registros where equipamento='Tanque de Fermentação 57' order by criado_em desc limit 1")" "$(Q "select cip_normalizar_nome('  bruno   COSTA ')")"
+ver "quem finalizou continua em Operador" "$(Q "select nome_operador from cip_registros where equipamento='Tanque de Fermentação 57' order by criado_em desc limit 1")" "Ana Lima"
+ver "nome inválido de quem iniciou é recusado" "$(E "$OPE $TT,'Ana Lima','{\"operador_inicio\":\"123\"}')")" "23514"
+ver "mesma pessoa nos dois campos é recusada" "$(E "$OPE $TT,'Ana Lima','{\"operador_inicio\":\"ana  lima\"}')")" "23514"
+ver "campo vazio não grava a chave" "$(E "$OPE insert into cip_registros (tipo_cip, equipamento, data_cip, hora_inicial, hora_final, nome_operador, dados) values ('completo','Tanque de Fermentação 56',current_date,'08:00','09:00','Ana Lima','{\"operador_inicio\":\"  \"}')" >/dev/null; Q "select (dados ? 'operador_inicio')::text from cip_registros where equipamento='Tanque de Fermentação 56' order by criado_em desc limit 1")" "false"
+E "$ADM select cadastrar_operador('Carla Souza')" >/dev/null
+ver "nome do cadastro fica com a grafia oficial" "$(E "$OPE $TT,'Ana Lima','{\"operador_inicio\":\"carla souza\"}')" >/dev/null; Q "select dados->>'operador_inicio' from cip_registros where equipamento='Tanque de Fermentação 57' order by criado_em desc limit 1")" "Carla Souza"
+Q "update cip_configuracao set exigir_operador_cadastrado = true" >/dev/null
+ver "com a lista obrigatória, quem iniciou também precisa estar cadastrado" "$(E "$OPE $TT,'Carla Souza','{\"operador_inicio\":\"Pedro Nunes\"}')")" "23514"
+Q "update cip_configuracao set exigir_operador_cadastrado = false" >/dev/null
+IDT=$(Q "select id from cip_registros where equipamento='Tanque de Fermentação 56' order by criado_em desc limit 1")
+ver "edição pode informar quem iniciou e fica no histórico" "$(E "$OPE select editar_registro_cip('$IDT','Tanque de Fermentação 56',current_date,'08:00','09:00','Ana Lima','{\"operador_inicio\":\"Bruno Costa\"}'::jsonb,null,'CIP começou no turno anterior','Ana Lima')" >/dev/null; Q "select (select dados->>'operador_inicio' from cip_registros where id='$IDT')||'|'||(select valores_novos->'dados'->>'operador_inicio' from cip_edicoes where registro_id='$IDT' order by criado_em desc limit 1)")" "Bruno Costa|Bruno Costa"
+ver "quem iniciou não entra na comparação de faixas" "$(Q "select count(*) from cip_registros r, jsonb_array_elements(r.verificacao_parametros->'itens') i where r.id='$IDT' and i->>'campo'='operador_inicio'")" "0"
+
 echo "== Desfazer (arquiva) e reaplicar =="
 ver "desfazer da v8.1 é recusado enquanto a v10 estiver aplicada (ordem: v10 antes)" "$("${P[@]}" -d $DB -f "$REPO_DIR/supabase/rollback/20261107120000_cip_v8_1_operadores_backup_desfazer.sql" 2>&1 | grep -c 'A v10 está aplicada')" "1"
 ANTES=$(Q "select count(*) from cip_registros")
@@ -148,9 +199,10 @@ ver "arquivo sem acesso pela API" "$(E "$OPE select count(*) from pg_namespace")
 ver "nenhum registro apagado" "$(Q "select count(*) from cip_registros")" "$ANTES"
 ver "view volta à definição anterior" "$(Q "select count(*) from pg_attribute where attrelid='public.vw_cip_registros'::regclass and attname='verificacao_parametros'")" "0"
 ver "gatilho de verificação removido" "$(Q "select count(*) from pg_trigger where tgname='trg_cip_registros_verificar_parametros'")" "0"
+ver "gatilho de troca de turno removido; nomes de quem iniciou preservados" "$(Q "select count(*) from pg_trigger where tgname='trg_cip_registros_operador_inicio'")-$(Q "select count(*)>0 from cip_registros where dados ? 'operador_inicio'")" "0-t"
 ver "backup volta ao formato da v8.1 e continua funcionando" "$(E "$ADM select cip_criar_backup()")" "ok"
 ver "reaplicar a v10 depois do desfazer" "$("${P[@]}" -d $DB -f "$M1" -f "$M2" >/dev/null 2>&1; echo $?)" "0"
-ver "após reaplicar, controles e verificação de volta" "$(Q "select count(*) from cip_adega_controles")-$(Q "select count(*) from pg_trigger where tgname='trg_cip_registros_verificar_parametros'")" "3-1"
+ver "após reaplicar, controles e verificação de volta" "$(Q "select count(*) from cip_adega_controles")-$(Q "select count(*) from pg_trigger where tgname='trg_cip_registros_verificar_parametros'")" "5-1"
 
 echo
 echo "Resultado: $OK ok, $FAIL falha(s)"

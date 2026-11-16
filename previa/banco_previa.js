@@ -34,7 +34,25 @@
   const chaveNome = (n) => normNome(n).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const GENERICAS = ["erro", "erros", "corrigir", "correcao", "corrigido", "ajuste", "ok", "teste", "n/a", "na", "pq sim", "porque sim", "alteracao", "edicao", "mudanca", "atualizacao", "sem motivo"];
   const textoValido = (t) => { const x = String(t || "").trim(); if (!x || x.length > 300) return false; const s = x.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); if (s.replace(/[^A-Za-z]/g, "").length < 4) return false; return !GENERICAS.includes(s.toLowerCase().replace(/[.,;:!?]/g, "").trim()); };
-  const numero = (t) => { const m = String(t ?? "").match(/-?[0-9]+(?:[.,][0-9]+)?/); return m ? Number(m[0].replace(",", ".")) : null; };
+  // Mesma regra do banco (cip_extrair_numero): vírgula decimal; ponto decimal ou de milhar ("6.500" → 6500).
+  const numero = (t) => {
+    const m = String(t ?? "").match(/-?[0-9]{1,3}(?:\.[0-9]{3})+(?![0-9.,])|-?[0-9]+(?:[.,][0-9]+)?/);
+    if (!m) return null;
+    return /^-?[0-9]{1,3}(\.[0-9]{3})+$/.test(m[0]) ? Number(m[0].replace(/\./g, "")) : Number(m[0].replace(",", "."));
+  };
+  // Mesma regra do banco (cip_grupo_equipamento).
+  function grupoEquip(e) {
+    e = String(e || "");
+    if (e.startsWith("Tanque de Fermentação ")) return "tanques_fermentacao";
+    if (e === "Linha de Trasfega") return "trasfega";
+    if (["Adega A", "Adega B", "Adega D"].includes(e)) return "adega";
+    if (e === "Filtro de Cerveja de Membrana — BMF") return "bmf_membranas";
+    if (["Tanque de Cerveja Maturada — UBT", "Tanque de Cerveja Filtrada — FBT", "Linha de Cerveja não filtrada — UBL", "Linha de Cerveja não filtrada — FBL"].includes(e)) return "bmf_tanques_linhas";
+    if (["Tanque de Sílica — BSÍLICA", "Tanque de PVPP — BPVPP", "Tanque de Alginato — BALGINATO", "Tanque de Antioxidante — BTA", "Tanque de Lúpulo — BLÚPULO"].includes(e)) return "bmf_aditivos";
+    if (["Linha de Filtração — BFILTRAÇÃO", "Linha até Adega — BADEGA"].includes(e)) return "bmf_linhas_maturada";
+    if (e === "Linha de Blendagem — BBLENDAGEM") return "bmf_blendagem";
+    return "outros";
+  }
 
   // ---------- dados fictícios iniciais ----------
   function semear() {
@@ -45,7 +63,7 @@
         { uid: UID_ADM, perfil: "administrador", nome: "Supervisão (prévia)" },
       ],
       cip_configuracao: [{ id: 1, dias_aviso_adega: 30, bloquear_data_futura: true,
-        tipos_data_futura: ["alcalino_clorado", "completo", "tanque_levedura", "linha_recuperacao_levedura", "osam", "filtracao_filtro3", "filtracao_bmf", "alcalino"],
+        tipos_data_futura: ["alcalino_clorado", "completo", "tanque_levedura", "linha_recuperacao_levedura", "osam", "filtracao_filtro3", "filtracao_bmf", "alcalino", "degas", "aldox"],
         exigir_operador_cadastrado: false, alerta_espera_horas: null, mapa_limite_amarelo: null, mapa_limite_vermelho: null,
         atualizado_em: agora(), atualizado_por_nome: null }],
       cip_operadores: [], cip_operadores_historico: [],
@@ -54,6 +72,8 @@
         { tipo_cip: "alcalino", ordem: 1, periodo_quantidade: 30, periodo_unidade: "dias", dias_aviso: 7, atualizado_em: agora(), atualizado_por_nome: "Prévia (exemplo)" },
         { tipo_cip: "alcalino_clorado", ordem: 2, periodo_quantidade: 6, periodo_unidade: "meses", dias_aviso: null, atualizado_em: agora(), atualizado_por_nome: "Prévia (exemplo)" },
         { tipo_cip: "osam", ordem: 3, periodo_quantidade: null, periodo_unidade: null, dias_aviso: null, atualizado_em: agora(), atualizado_por_nome: "Prévia (exemplo)" },
+        { tipo_cip: "degas", ordem: 4, periodo_quantidade: 7, periodo_unidade: "dias", dias_aviso: 2, atualizado_em: agora(), atualizado_por_nome: "Prévia (exemplo)" },
+        { tipo_cip: "aldox", ordem: 5, periodo_quantidade: 7, periodo_unidade: "dias", dias_aviso: 2, atualizado_em: agora(), atualizado_por_nome: "Prévia (exemplo)" },
       ],
       cip_adega_controles_historico: [], cip_adega_datas_base: [],
       cip_parametros_faixas: [], cip_parametros_faixas_historico: [],
@@ -68,11 +88,13 @@
     const ops = db.cip_operadores.map((o) => o.nome);
     const tf = (n) => { const h = { 53: "H01", 54: "H02", 55: "H03", 56: "H04", 57: "H05", 58: "H06", 59: "H07", 60: "H08", 61: "H09" }[n]; return `Tanque de Fermentação ${String(n).padStart(2, "0")}${h ? ` (HORAP ${h})` : ""}`; };
     const dadosCompleto = (soda, acido, pressao) => ({ num_utilizacao_soda: String(10 + Math.floor(rnd() * 40)), painel_cip: "Painel 2", conc_inicial_soda: soda, conc_final_soda: (numero(soda) - 0.3).toFixed(1).replace(".", ",") + "%", tempo_circulacao_soda: "20 min", num_utilizacao_acido: String(5 + Math.floor(rnd() * 30)), hora_inicial_acido: "08:30", hora_final_acido: "08:55", painel_cip_acido: "Painel 2", conc_inicial_acido: acido, conc_final_acido: "0,8%", tempo_circulacao_acido: "15 min", num_utilizacao_divosan: "3", hora_inicial_divosan: "09:00", hora_final_divosan: "09:15", conc_inicial_divosan: "0,3%", conc_final_divosan: "0,25%", tempo_circulacao_divosan: "10 min", pressao, ph_enxague_final: "6,9", limpeza_cone_cupula_microbiologico: "Sim", coordenador_lider: "Carla Dias" });
-    // Faixas FICTÍCIAS de exemplo (só na prévia) — as oficiais ainda serão informadas.
+    // Faixas OFICIAIS (tabelas Anexo 1) — mesma carga da migração v10,
+    // gerada por montar_previa.sh em previa/faixas_oficiais.js.
     const dataFaixas = hojeChave(-21);
-    [["completo", "conc_inicial_soda", 2, 4, "%"], ["completo", "conc_inicial_acido", 0.5, 1.5, "%"], ["completo", "pressao", null, 3, "bar"]].forEach(([t, c, mi, ma, u]) => {
-      db.cip_parametros_faixas.push({ tipo_cip: t, campo: c, minimo: mi, maximo: ma, unidade: u, ativo: true, atualizado_em: dataFaixas + "T10:00:00-03:00", atualizado_por_nome: "EXEMPLO FICTÍCIO (prévia)" });
-      db.cip_parametros_faixas_historico.push({ id: hid++, tipo_cip: t, campo: c, minimo: mi, maximo: ma, unidade: u, ativo: true, por_nome: "EXEMPLO FICTÍCIO (prévia)", criado_em: dataFaixas + "T10:00:00-03:00" });
+    (window.CIP_FAIXAS_OFICIAIS || []).forEach(([t, c, g, mi, ma, u, fonte]) => {
+      const f = { tipo_cip: t, campo: c, grupo_equipamento: g, minimo: mi, maximo: ma, unidade: u, fonte, ativo: true, atualizado_em: dataFaixas + "T10:00:00-03:00", atualizado_por_nome: "Migração CIP v10 (Anexo 1)" };
+      db.cip_parametros_faixas.push(f);
+      db.cip_parametros_faixas_historico.push({ id: hid++, ...f, por_nome: f.atualizado_por_nome, criado_em: f.atualizado_em });
     });
     const add = (tipo, equip, dias, extra = {}) => {
       const data = hojeChave(-dias);
@@ -113,7 +135,12 @@
     add("alcalino", "Adega D", 66, { dados: dadosCompleto("3,2%", "1,1%", "2,0 bar") });
     avaliar(add("alcalino_clorado", "Adega D", 41), "conforme");
     add("osam", "BBT 07", 2, { dados: dadosCompleto("3,4%", "0,7%", "2,6 bar") });
-    // Recentes com parâmetros fora da faixa fictícia (aguardando avaliação)
+    // Degás e Aldox (semanais): Aldox em dia, Degás vencido
+    const dDA = (soda, tempo, est) => ({ num_utilizacao_soda: "12", conc_inicial_soda: soda, conc_final_soda: "2,4%", tempo_circulacao_soda: tempo, temperatura_retorno: "Ambiente", esterilizacao_temperatura: est, esterilizacao_tempo: "30 min", ph_isencao: "8,1", coordenador_lider: "Carla Dias" });
+    add("aldox", "Aldox — Aldox", 3, { dados: dDA("2,6%", "45 min", "82 °C") });
+    add("aldox", "Aldox — Aldox", 10, { dados: dDA("2,7%", "50 min", "81 °C") });
+    add("degas", "Degas — DEGAS", 9, { dados: dDA("2,8%", "40 min", "78 °C") });
+    // Recentes com parâmetros fora da faixa (aguardando avaliação)
     add("completo", tf(14), 1, { dados: dadosCompleto("5,2%", "1,0%", "3,6 bar"), obs: "Concentração alta na partida" });
     add("completo", tf(33), 0, { dados: dadosCompleto("3,0%", "0,3%", "2,4 bar") });
     add("completo", tf(9), 0, { dados: dadosCompleto("2,8%", "1,1%", "2,2 bar") });
@@ -130,7 +157,11 @@
   }
 
   function verificar(db, r) {
-    const faixas = db.cip_parametros_faixas.filter((f) => f.tipo_cip === r.tipo_cip && f.ativo).sort((a, b) => a.campo.localeCompare(b.campo));
+    const g = grupoEquip(r.equipamento);
+    const cand = db.cip_parametros_faixas.filter((f) => f.tipo_cip === r.tipo_cip && f.ativo && (f.grupo_equipamento === "todos" || f.grupo_equipamento === g));
+    const porCampo = {};
+    cand.forEach((f) => { if (!porCampo[f.campo] || porCampo[f.campo].grupo_equipamento === "todos") porCampo[f.campo] = f; });
+    const faixas = Object.values(porCampo).sort((a, b) => a.campo.localeCompare(b.campo));
     if (!faixas.length) return null;
     let fora = 0;
     const itens = faixas.map((f) => {
@@ -138,9 +169,9 @@
       const n = numero(texto);
       let s = texto === null ? "sem_valor" : n === null ? "nao_numerico" : f.minimo !== null && n < f.minimo ? "abaixo" : f.maximo !== null && n > f.maximo ? "acima" : "dentro";
       if (s === "abaixo" || s === "acima") fora++;
-      return { campo: f.campo, valor: texto, numero: n, minimo: f.minimo, maximo: f.maximo, unidade: f.unidade, situacao: s, faixa_atualizada_em: f.atualizado_em };
+      return { campo: f.campo, valor: texto, numero: n, minimo: f.minimo, maximo: f.maximo, unidade: f.unidade, situacao: s, grupo_equipamento: f.grupo_equipamento, fonte: f.fonte, faixa_atualizada_em: f.atualizado_em };
     });
-    return { verificado_em: r.criado_em || agora(), verificados: itens.length, fora_da_faixa: fora, itens };
+    return { verificado_em: r.criado_em || agora(), verificados: itens.length, fora_da_faixa: fora, grupo_equipamento: g, itens };
   }
 
   function carregar() {
@@ -357,9 +388,10 @@
       const e = soAdm(db, "Somente o supervisor/administrador pode definir faixas de parâmetros."); if (e) return e;
       if (a.p_minimo === null && a.p_maximo === null) return erro("22023", "Informe ao menos o limite mínimo ou o máximo.");
       if (a.p_minimo !== null && a.p_maximo !== null && a.p_minimo > a.p_maximo) return erro("22023", "O limite mínimo não pode ser maior que o máximo.");
-      let f = db.cip_parametros_faixas.find((x) => x.tipo_cip === a.p_tipo_cip && x.campo === a.p_campo);
-      if (!f) { f = { tipo_cip: a.p_tipo_cip, campo: a.p_campo }; db.cip_parametros_faixas.push(f); }
-      Object.assign(f, { minimo: a.p_minimo, maximo: a.p_maximo, unidade: a.p_unidade || null, ativo: a.p_ativo !== false, atualizado_em: agora(), atualizado_por_nome: quem(db) });
+      const grupo = a.p_grupo_equipamento || "todos";
+      let f = db.cip_parametros_faixas.find((x) => x.tipo_cip === a.p_tipo_cip && x.campo === a.p_campo && x.grupo_equipamento === grupo);
+      if (!f) { f = { tipo_cip: a.p_tipo_cip, campo: a.p_campo, grupo_equipamento: grupo }; db.cip_parametros_faixas.push(f); }
+      Object.assign(f, { minimo: a.p_minimo, maximo: a.p_maximo, unidade: a.p_unidade || null, fonte: a.p_fonte || f.fonte || null, ativo: a.p_ativo !== false, atualizado_em: agora(), atualizado_por_nome: quem(db) });
       db.cip_parametros_faixas_historico.push({ id: db._hid++, ...f, por_nome: quem(db), criado_em: agora() });
       salvar(db); return ok(null);
     },

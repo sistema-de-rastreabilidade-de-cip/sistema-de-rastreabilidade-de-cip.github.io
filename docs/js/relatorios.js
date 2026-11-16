@@ -88,14 +88,14 @@ function relTextoObs(lista) {
 function relCsvRegistros() {
   const d = REL_DADOS;
   const campos = relCamposProcedimento(d.registros);
-  const cab = ["ID do registro", "Data do CIP", "Hora inicial", "Hora final", "Tipo de CIP", "Equipamento", "BBT", "Operador",
+  const cab = ["ID do registro", "Data do CIP", "Hora inicial", "Hora final", "Tipo de CIP", "Equipamento", "BBT", "Operador", "Operador que iniciou (troca de turno)",
     "Situação da avaliação", "Revisão necessária", "Avaliado por", "Avaliado em", "Descrição/justificativa da avaliação",
     "Observações do operador", "Observações administrativas", "Nº de alterações", "Nº de eventos de avaliação", "Criado em", "Última atualização",
     "Verificação dos parâmetros",
     ...campos.map(([, label]) => label)];
   const linhas = d.registros.map((r) => [
     r.id, cipFmtData(r.data_cip), cipHora(r.hora_inicial), r.hora_final ? cipHora(r.hora_final) : "", cipRotuloTipo(r.tipo_cip),
-    r.equipamento, r.bbt || "", r.nome_operador, CIP_ROTULO_AVALIACAO[cipSituacao(r)], cipTemRevisao(r) ? "Sim" : "Não",
+    r.equipamento, r.bbt || "", r.nome_operador, cipOperadorInicio(r), CIP_ROTULO_AVALIACAO[cipSituacao(r)], cipTemRevisao(r) ? "Sim" : "Não",
     r.avaliador_nome || "", r.avaliado_em ? cipFmtDataHora(r.avaliado_em) : "", r.avaliacao_observacao || "",
     r.observacoes_operador || "", relTextoObs(d.obs[r.id]), (d.edicoes[r.id] || []).length, (d.avaliacoes[r.id] || []).length,
     cipFmtDataHora(r.criado_em), r.atualizado_em ? cipFmtDataHora(r.atualizado_em) : "",
@@ -136,7 +136,7 @@ function relRenderizar() {
     return `
       <article class="relatorio-registro" data-registro="${cipEsc(r.id)}">
         <h3>${cipEsc(cipRotuloTipo(r.tipo_cip))} — ${cipRotuloEquipHtml(r)} · ${cipFmtData(r.data_cip)} ${cipHora(r.hora_inicial)}${r.hora_final ? "–" + cipHora(r.hora_final) : ""}</h3>
-        <div style="margin-bottom:6px;">${cipSelos(r)} <span class="sem-dado">Operador: ${cipEsc(r.nome_operador)} · Registrado em ${cipFmtDataHora(r.criado_em)}</span></div>
+        <div style="margin-bottom:6px;">${cipSelos(r)} <span class="sem-dado">Operador: ${cipEsc(cipTextoOperadores(r))} · Registrado em ${cipFmtDataHora(r.criado_em)}</span></div>
         <h4>Informações do procedimento</h4>
         <div class="grade-dados">${dados}<div><span>Observações do operador:</span> ${cipEsc(r.observacoes_operador || "—")}</div></div>
         <h4>Avaliação do supervisor</h4>

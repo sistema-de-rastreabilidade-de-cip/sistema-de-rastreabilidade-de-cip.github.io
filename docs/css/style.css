@@ -1636,3 +1636,12 @@ main.conteudo > #mensagem:empty, section > #mensagem:empty { display: none; }
   .item-ranking { grid-template-columns: 24px minmax(0, 1fr) 34px; grid-template-areas: "pos nome num" "pos barra barra" "pos meta meta"; }
 }
 @media print { .filtros-rastreio, #rt-config { display: none; } }
+.origem-faixa { font-size: 0.7rem; color: var(--cor-texto-suave); margin-top: 2px; }
+.tabela-faixas tr.faixa-ativa td:first-child { box-shadow: inset 3px 0 0 var(--cor-primaria-clara); }
+.tabela-faixas .faixa-fonte { min-width: 180px; }
+
+/* v10 — CIP que passa de turno */
+.form-grid .campo-turno { grid-column: 1 / -1; }
+.rotulo-check { display: flex; gap: 8px; align-items: center; font-weight: 500; cursor: pointer; }
+.rotulo-check input { width: auto; margin: 0; }
+.nota-turno { margin: 2px 0 8px; font-size: 0.84rem; color: var(--cor-texto-suave); }

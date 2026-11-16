@@ -18,13 +18,18 @@ Esta seção vale só depois da publicação da v10. Detalhes em `V10_ADEGA_FAIX
   "Registrar CIP":
   - CIP Alcalino, a cada 30 dias;
   - CIP Alcalino Clorado, a cada 6 meses;
-  - CIP OSAN, com BBT 01 a BBT 12 e periodicidade a definir.
+  - CIP OSAN, com BBT 01 a BBT 12 e periodicidade a definir;
+  - CIP Degás e CIP Aldox, semanais (PO-JAC-FAB-030 e 029).
 
   O supervisor configura a periodicidade, a antecedência do aviso e a data-base em "Configurar
   este procedimento", no próprio cartão.
-- **Faixas dos parâmetros:** o supervisor cadastra as faixas oficiais em Gestão. O operador vê,
+- **Faixas dos parâmetros:** o sistema já vem com as 59 faixas oficiais das tabelas Anexo 1, por
+  tipo de CIP e grupo de equipamentos; o supervisor ajusta em Gestão. O operador vê,
   depois de salvar, quais parâmetros ficaram fora da faixa (em vermelho), e o supervisor vê o
   mesmo no detalhe do registro.
+- **CIP que passou de turno:** quem termina o CIP preenche o formulário, marca "Este CIP passou de
+  turno" e escolhe o operador que iniciou. O campo Operador passa a ser quem finalizou. Os dois
+  nomes ficam no registro, no histórico e no CSV.
 - **Rastreabilidade de Contaminação:** aba nova do supervisor, com mapa de calor, ranking e
   histórico das ocorrências, por período, tipo e equipamento.
 

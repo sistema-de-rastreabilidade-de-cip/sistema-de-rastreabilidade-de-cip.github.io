@@ -15,8 +15,10 @@
 --     periodicidade definida (OSAN: pendente de definição)
 --   * public.cip_adega_datas_base (+ vw_cip_adega_datas_base_atual)
 --   * public.cip_parametros_faixas (+ _historico): faixas aceitáveis por
---     tipo de CIP e campo. NASCE VAZIA: nenhuma faixa é inventada; sem faixa,
---     a comparação fica desligada para aquele parâmetro.
+--     tipo de CIP, campo e grupo de equipamentos, carregadas com os limites
+--     OFICIAIS das tabelas "Anexo 1" (Fermentação, Levedura, Adegas, BMF,
+--     Aldox, Degás). Sem faixa, o parâmetro não é comparado.
+--   * controles da Adega também para os novos CIPs de Degás e Aldox (semanal)
 --   * coluna public.cip_registros.verificacao_parametros: resultado da
 --     comparação gravado no momento do registro/edição (rastreabilidade)
 --   * colunas em public.cip_configuracao: mapa_limite_amarelo e
@@ -76,7 +78,10 @@ create index idx_cip_adega_controles_uid on public.cip_adega_controles (atualiza
 insert into public.cip_adega_controles (tipo_cip, ordem, periodo_quantidade, periodo_unidade, atualizado_por_nome) values
   ('alcalino',         1, 30,   'dias',  'Migração CIP v10'),
   ('alcalino_clorado', 2, 6,    'meses', 'Migração CIP v10'),
-  ('osam',             3, null, null,    'Migração CIP v10');
+  ('osam',             3, null, null,    'Migração CIP v10'),
+  -- Degás e Aldox: soda SEMANAL nas tabelas PO-JAC-FAB-030 e 029 (Anexo 1)
+  ('degas',            4, 7,    'dias',  'Migração CIP v10'),
+  ('aldox',            5, 7,    'dias',  'Migração CIP v10');
 
 create table public.cip_adega_controles_historico (
   id bigint generated always as identity primary key,
@@ -133,7 +138,7 @@ where acao = 'definir';
 create or replace function public.cip_registro_conta_adega(p_tipo public.tipo_cip_enum, p_equipamento text)
 returns boolean language sql immutable set search_path = '' as $$
   select case
-    when p_tipo in ('alcalino', 'osam') then true
+    when p_tipo in ('alcalino', 'osam', 'degas', 'aldox') then true
     when p_tipo = 'alcalino_clorado' then p_equipamento in ('Adega A', 'Adega B', 'Adega D')
     else false
   end;
@@ -217,19 +222,52 @@ end;
 $function$;
 
 -- ---------------------------------------------------------------------
--- 2. Faixas aceitáveis dos parâmetros (vazia até receber as oficiais)
+-- 2. Faixas aceitáveis dos parâmetros
+--    Carga inicial: limites OFICIAIS das tabelas "Anexo 1" enviadas pelo
+--    usuário em 16/11/2026 (TQ Fermentação, TQs de Levedura, Adegas, BMF,
+--    Aldox e Degás). Cada faixa vale para um tipo de CIP e um GRUPO de
+--    equipamentos, porque a mesma tabela traz limites diferentes por
+--    equipamento (ex.: soda 30 ± 10 min nos tanques e 60 ± 30 min na Linha
+--    de Trasfega). Parâmetro sem faixa não é comparado.
 -- ---------------------------------------------------------------------
+
+-- Grupo de equipamentos usado pelas faixas. 'todos' = qualquer equipamento
+-- do tipo de CIP. Os nomes seguem exatamente as listas do site.
+create or replace function public.cip_grupo_equipamento(p_equipamento text)
+returns text language sql immutable set search_path = '' as $$
+  select case
+    when p_equipamento like 'Tanque de Fermentação %' then 'tanques_fermentacao'
+    when p_equipamento = 'Linha de Trasfega' then 'trasfega'
+    when p_equipamento in ('Adega A', 'Adega B', 'Adega D') then 'adega'
+    when p_equipamento = 'Filtro de Cerveja de Membrana — BMF' then 'bmf_membranas'
+    when p_equipamento in ('Tanque de Cerveja Maturada — UBT', 'Tanque de Cerveja Filtrada — FBT',
+                           'Linha de Cerveja não filtrada — UBL', 'Linha de Cerveja não filtrada — FBL') then 'bmf_tanques_linhas'
+    when p_equipamento in ('Tanque de Sílica — BSÍLICA', 'Tanque de PVPP — BPVPP', 'Tanque de Alginato — BALGINATO',
+                           'Tanque de Antioxidante — BTA', 'Tanque de Lúpulo — BLÚPULO') then 'bmf_aditivos'
+    when p_equipamento in ('Linha de Filtração — BFILTRAÇÃO', 'Linha até Adega — BADEGA') then 'bmf_linhas_maturada'
+    when p_equipamento = 'Linha de Blendagem — BBLENDAGEM' then 'bmf_blendagem'
+    else 'outros'
+  end;
+$$;
+create or replace function public.cip_grupos_equipamento()
+returns text[] language sql immutable set search_path = '' as $$
+  select array['todos','tanques_fermentacao','trasfega','adega','bmf_membranas','bmf_tanques_linhas',
+               'bmf_aditivos','bmf_linhas_maturada','bmf_blendagem'];
+$$;
+
 create table public.cip_parametros_faixas (
   tipo_cip public.tipo_cip_enum not null,
   campo text not null check (campo ~ '^[a-z0-9_]{1,80}$'),
+  grupo_equipamento text not null default 'todos' check (grupo_equipamento = any (public.cip_grupos_equipamento())),
   minimo numeric,
   maximo numeric,
   unidade text check (unidade is null or char_length(unidade) <= 20),
+  fonte text check (fonte is null or char_length(fonte) <= 200),
   ativo boolean not null default true,
   atualizado_em timestamptz not null default now(),
   atualizado_por_nome text not null,
   atualizado_por_uid uuid references auth.users(id),
-  primary key (tipo_cip, campo),
+  primary key (tipo_cip, campo, grupo_equipamento),
   constraint cip_parametros_faixas_limite check (minimo is not null or maximo is not null),
   constraint cip_parametros_faixas_ordem check (minimo is null or maximo is null or minimo <= maximo)
 );
@@ -241,9 +279,11 @@ create table public.cip_parametros_faixas_historico (
   id bigint generated always as identity primary key,
   tipo_cip public.tipo_cip_enum not null,
   campo text not null,
+  grupo_equipamento text not null,
   minimo numeric,
   maximo numeric,
   unidade text,
+  fonte text,
   ativo boolean not null,
   por_nome text not null,
   por_uid uuid references auth.users(id),
@@ -256,21 +296,110 @@ create trigger trg_cip_parametros_faixas_historico_imutavel before update or del
 create trigger trg_cip_parametros_faixas_historico_sem_truncate before truncate on public.cip_parametros_faixas_historico
   for each statement execute function public.cip_bloquear_alteracao_historico();
 
+-- Carga oficial. "± x" foi convertido em mínimo e máximo; "a" mantido como
+-- está. Temperatura "ambiente" e pH (por decisão do usuário) não entram.
+-- Concentração: a mesma faixa para o valor inicial e o final (decisão do
+-- usuário), exceto no BMF, cujo formulário oficial (Anexo 3) já traz faixas
+-- próprias para os valores finais. "Sanitizante" das tabelas de
+-- Fermentação e Levedura = campos de Ácido dos formulários (decisão do
+-- usuário).
+insert into public.cip_parametros_faixas (tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, atualizado_por_nome)
+-- trim_scale: 2.0 vira 2 e 0.20 vira 0.2. O arquivo de backup passa pelo
+-- JSON do navegador, que não guarda zeros à direita; sem isso o checksum
+-- do arquivo baixado não confere na restauração.
+select v.tipo::public.tipo_cip_enum, v.campo, v.grupo, trim_scale(v.minimo), trim_scale(v.maximo), v.unidade, v.fonte, 'Migração CIP v10 (Anexo 1)'
+from (values
+  -- CIP TFM/HORAP/Trasfega/DAW (antigo Completo) — TQs de Fermentação, Anexo 1, rev. 22
+  ('completo','conc_inicial_soda','tanques_fermentacao',2.0,3.0,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025)'),
+  ('completo','conc_final_soda','tanques_fermentacao',2.0,3.0,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025)'),
+  ('completo','tempo_circulacao_soda','tanques_fermentacao',20,40,'min','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025)'),
+  ('completo','conc_inicial_acido','tanques_fermentacao',2.0,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Sanitizante'),
+  ('completo','conc_final_acido','tanques_fermentacao',2.0,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Sanitizante'),
+  ('completo','tempo_circulacao_acido','tanques_fermentacao',20,40,'min','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Sanitizante'),
+  ('completo','conc_inicial_divosan','tanques_fermentacao',0.20,0.30,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Divosan'),
+  ('completo','conc_final_divosan','tanques_fermentacao',0.20,0.30,'%','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Divosan'),
+  ('completo','tempo_circulacao_divosan','tanques_fermentacao',20,40,'min','TQs de Fermentação — Anexo 1, rev. 22 (04/04/2025) — Divosan'),
+  ('completo','conc_inicial_soda','trasfega',2.0,3.0,'%','TQs de Fermentação — Anexo 1, rev. 22 — Linhas de transferência (CIP 7)'),
+  ('completo','conc_final_soda','trasfega',2.0,3.0,'%','TQs de Fermentação — Anexo 1, rev. 22 — Linhas de transferência (CIP 7)'),
+  ('completo','tempo_circulacao_soda','trasfega',30,90,'min','TQs de Fermentação — Anexo 1, rev. 22 — Linhas de transferência (CIP 7)'),
+  ('completo','conc_inicial_soda','adega',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo'),
+  ('completo','conc_final_soda','adega',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo'),
+  ('completo','tempo_circulacao_soda','adega',20,40,'min','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo'),
+  -- CIP Alcalino Clorado
+  ('alcalino_clorado','conc_inicial','tanques_fermentacao',1.5,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 — Solução alcalina clorada'),
+  ('alcalino_clorado','conc_final','tanques_fermentacao',1.5,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 — Solução alcalina clorada'),
+  ('alcalino_clorado','tempo_circulacao','tanques_fermentacao',100,140,'min','TQs de Fermentação — Anexo 1, rev. 22 — Solução alcalina clorada'),
+  ('alcalino_clorado','conc_inicial_acido','tanques_fermentacao',2.0,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 — Sanitizante'),
+  ('alcalino_clorado','conc_final_acido','tanques_fermentacao',2.0,2.5,'%','TQs de Fermentação — Anexo 1, rev. 22 — Sanitizante'),
+  ('alcalino_clorado','tempo_circulacao_acido','tanques_fermentacao',20,40,'min','TQs de Fermentação — Anexo 1, rev. 22 — Sanitizante'),
+  ('alcalino_clorado','conc_inicial','adega',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — CIP Clorado nos equipamentos da Adega'),
+  ('alcalino_clorado','conc_final','adega',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — CIP Clorado nos equipamentos da Adega'),
+  ('alcalino_clorado','tempo_circulacao','adega',100,140,'min','PO-JAC-FAB-006, Anexo 1, rev. 10 — CIP Clorado nos equipamentos da Adega'),
+  -- CIP Alcalino (Adega, mensal) — Adegas, Tanques Pressão CIP Completo
+  ('alcalino','conc_inicial_soda','todos',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo (mensal)'),
+  ('alcalino','conc_final_soda','todos',2.0,3.0,'%','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo (mensal)'),
+  ('alcalino','tempo_circulacao_soda','todos',20,40,'min','PO-JAC-FAB-006, Anexo 1, rev. 10 — Tanques Pressão CIP Completo (mensal)'),
+  -- CIP Tanque de Levedura — PO-JAC-FAB-032, Anexo 1, rev. 0
+  ('tanque_levedura','conc_inicial_soda','todos',2.0,3.0,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 (04/08/2017)'),
+  ('tanque_levedura','conc_final_soda','todos',2.0,3.0,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 (04/08/2017)'),
+  ('tanque_levedura','tempo_circulacao_soda','todos',20,40,'min','PO-JAC-FAB-032, Anexo 1, rev. 0 (04/08/2017)'),
+  ('tanque_levedura','conc_inicial_acido','todos',2.0,2.5,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 — Sanitizante'),
+  ('tanque_levedura','conc_final_acido','todos',2.0,2.5,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 — Sanitizante'),
+  ('tanque_levedura','tempo_circulacao_acido','todos',20,40,'min','PO-JAC-FAB-032, Anexo 1, rev. 0 — Sanitizante'),
+  ('tanque_levedura','conc_inicial_solucao_alcalina_clorada','todos',1.5,2.5,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 — Solução alcalina clorada'),
+  ('tanque_levedura','conc_final_solucao_alcalina_clorada','todos',1.5,2.5,'%','PO-JAC-FAB-032, Anexo 1, rev. 0 — Solução alcalina clorada'),
+  ('tanque_levedura','tempo_circulacao_solucao_alcalina_clorada','todos',100,140,'min','PO-JAC-FAB-032, Anexo 1, rev. 0 — Solução alcalina clorada'),
+  -- CIP Filtração — BMF — PO-JAC-FAB-024, Anexo I, rev. 4
+  ('filtracao_bmf','bmf_conc_inicial_soda','bmf_membranas',2.0,4.0,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Membranas, CIP completo/extendido'),
+  ('filtracao_bmf','bmf_conc_final_soda','bmf_membranas',1.0,3.0,'%','PO-JAC-FAB-024, Anexo 3, rev. 2 — faixa do próprio formulário'),
+  ('filtracao_bmf','bmf_conc_inicial_divos','bmf_membranas',4500,8500,'ppm','PO-JAC-FAB-024, Anexo I, rev. 4 — Membranas, CIP completo/extendido'),
+  ('filtracao_bmf','bmf_conc_final_divos','bmf_membranas',500,4500,'ppm','PO-JAC-FAB-024, Anexo 3, rev. 2 — faixa do próprio formulário'),
+  ('filtracao_bmf','bmf_conc_inicial_acido','bmf_membranas',0.2,0.6,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Membranas, ácido nítrico'),
+  ('filtracao_bmf','bmf_conc_inicial_acido','bmf_tanques_linhas',0.8,1.2,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — UBT/UBL/FBT/FBL, ácido nítrico'),
+  ('filtracao_bmf','bmf_conc_inicial_acido','bmf_aditivos',0.5,1.5,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Tanques de aditivos, ácido nítrico'),
+  ('filtracao_bmf','bmf_conc_inicial_soda','bmf_linhas_maturada',2.0,3.0,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de maturada, envio BMF, envio adegas'),
+  ('filtracao_bmf','bmf_conc_final_soda','bmf_linhas_maturada',2.0,3.0,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de maturada, envio BMF, envio adegas'),
+  ('filtracao_bmf','bmf_conc_inicial_acido','bmf_linhas_maturada',0.8,1.2,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de maturada, envio BMF, envio adegas'),
+  ('filtracao_bmf','bmf_conc_inicial_soda','bmf_blendagem',2.0,3.0,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de blendagem e água desaerada'),
+  ('filtracao_bmf','bmf_conc_final_soda','bmf_blendagem',2.0,3.0,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de blendagem e água desaerada'),
+  ('filtracao_bmf','bmf_conc_inicial_acido','bmf_blendagem',0.8,1.2,'%','PO-JAC-FAB-024, Anexo I, rev. 4 — Linhas de blendagem e água desaerada'),
+  -- CIP Aldox — PO-JAC-FAB-029, Anexo 1, rev. 0
+  ('aldox','conc_inicial_soda','todos',2.0,3.0,'%','PO-JAC-FAB-029, Anexo 1, rev. 0 (04/08/2017)'),
+  ('aldox','conc_final_soda','todos',2.0,3.0,'%','PO-JAC-FAB-029, Anexo 1, rev. 0 (04/08/2017)'),
+  ('aldox','tempo_circulacao_soda','todos',30,90,'min','PO-JAC-FAB-029, Anexo 1, rev. 0 (04/08/2017)'),
+  ('aldox','esterilizacao_temperatura','todos',80,null,'°C','PO-JAC-FAB-029, Anexo 1, rev. 0 — esterilização após atingir 80 ºC no retorno'),
+  ('aldox','esterilizacao_tempo','todos',30,null,'min','PO-JAC-FAB-029, Anexo 1, rev. 0 — esterilização durante 30 min'),
+  -- CIP Degás — PO-JAC-FAB-030, Anexo 1, rev. 0
+  ('degas','conc_inicial_soda','todos',2.0,3.0,'%','PO-JAC-FAB-030, Anexo 1, rev. 0 (04/08/2017)'),
+  ('degas','conc_final_soda','todos',2.0,3.0,'%','PO-JAC-FAB-030, Anexo 1, rev. 0 (04/08/2017)'),
+  ('degas','tempo_circulacao_soda','todos',30,90,'min','PO-JAC-FAB-030, Anexo 1, rev. 0 (04/08/2017)'),
+  ('degas','esterilizacao_temperatura','todos',80,null,'°C','PO-JAC-FAB-030, Anexo 1, rev. 0 — esterilização após atingir 80 ºC no retorno'),
+  ('degas','esterilizacao_tempo','todos',30,null,'min','PO-JAC-FAB-030, Anexo 1, rev. 0 — esterilização durante 30 min')
+) as v(tipo, campo, grupo, minimo, maximo, unidade, fonte);
+
+insert into public.cip_parametros_faixas_historico (tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, ativo, por_nome)
+select tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, ativo, atualizado_por_nome from public.cip_parametros_faixas;
+
 -- Primeiro número do texto digitado ("2,5%" → 2.5; "4500 ppm" → 4500;
--- "80 °C" → 80). Vírgula ou ponto como separador decimal. Sem número: null.
+-- "80 °C" → 80). Vírgula como decimal; ponto como decimal ("2.5") ou como
+-- milhar quando seguido de grupos de 3 dígitos ("6.500 ppm" → 6500,
+-- "1.200" → 1200). Sem número: null.
 create or replace function public.cip_extrair_numero(p_texto text)
 returns numeric language sql immutable set search_path = '' as $$
-  select replace((regexp_match(coalesce(p_texto, ''), '-?[0-9]+(?:[.,][0-9]+)?'))[1], ',', '.')::numeric;
+  select trim_scale(case when m ~ '^-?[0-9]{1,3}(\.[0-9]{3})+$' then replace(m, '.', '')::numeric
+              else replace(m, ',', '.')::numeric end)
+  from (select (regexp_match(coalesce(p_texto, ''), '-?[0-9]{1,3}(?:\.[0-9]{3})+(?![0-9.,])|-?[0-9]+(?:[.,][0-9]+)?'))[1] as m) x;
 $$;
 
 -- Gatilho: compara os valores digitados com as faixas ATIVAS do tipo de CIP
--- e grava o resultado. Os valores digitados (dados) nunca são alterados.
--- Sem faixa cadastrada para o tipo: verificacao_parametros fica vazia
--- (comparação desligada).
+-- para o grupo do equipamento (a faixa do grupo tem prioridade sobre a de
+-- 'todos') e grava o resultado. Os valores digitados (dados) nunca são
+-- alterados. Sem faixa aplicável: verificacao_parametros fica vazia.
 create or replace function public.cip_verificar_parametros()
 returns trigger language plpgsql set search_path = '' as $$
 declare
   f record;
+  v_grupo text;
   v_itens jsonb := '[]'::jsonb;
   v_texto text;
   v_num numeric;
@@ -281,12 +410,14 @@ begin
   if public.cip_em_restauracao() then
     return new;
   end if;
-  if tg_op = 'UPDATE' and new.dados is not distinct from old.dados then
+  if tg_op = 'UPDATE' and new.dados is not distinct from old.dados and new.equipamento is not distinct from old.equipamento then
     new.verificacao_parametros := old.verificacao_parametros;
     return new;
   end if;
-  for f in select * from public.cip_parametros_faixas p
-           where p.tipo_cip = new.tipo_cip and p.ativo order by p.campo loop
+  v_grupo := public.cip_grupo_equipamento(new.equipamento);
+  for f in select distinct on (p.campo) p.* from public.cip_parametros_faixas p
+           where p.tipo_cip = new.tipo_cip and p.ativo and p.grupo_equipamento in ('todos', v_grupo)
+           order by p.campo, (p.grupo_equipamento = 'todos') loop
     v_texto := nullif(btrim(coalesce(new.dados->>f.campo, '')), '');
     v_num := public.cip_extrair_numero(v_texto);
     if v_texto is null then v_sit := 'sem_valor';
@@ -298,13 +429,14 @@ begin
     if v_sit in ('abaixo', 'acima') then v_fora := v_fora + 1; end if;
     v_itens := v_itens || jsonb_build_array(jsonb_build_object(
       'campo', f.campo, 'valor', v_texto, 'numero', v_num, 'minimo', f.minimo, 'maximo', f.maximo,
-      'unidade', f.unidade, 'situacao', v_sit, 'faixa_atualizada_em', f.atualizado_em));
+      'unidade', f.unidade, 'situacao', v_sit, 'grupo_equipamento', f.grupo_equipamento, 'fonte', f.fonte,
+      'faixa_atualizada_em', f.atualizado_em));
   end loop;
   if jsonb_array_length(v_itens) = 0 then
     new.verificacao_parametros := null;
   else
     new.verificacao_parametros := jsonb_build_object('verificado_em', now(), 'verificados', jsonb_array_length(v_itens),
-                                                     'fora_da_faixa', v_fora, 'itens', v_itens);
+                                                     'fora_da_faixa', v_fora, 'grupo_equipamento', v_grupo, 'itens', v_itens);
   end if;
   return new;
 end;
@@ -313,22 +445,28 @@ $$;
 -- "if not exists": a coluna sobrevive a um desfazer (dados não são apagados).
 alter table public.cip_registros add column if not exists verificacao_parametros jsonb;
 create trigger trg_cip_registros_verificar_parametros
-  before insert or update of dados on public.cip_registros
+  before insert or update of dados, equipamento on public.cip_registros
   for each row execute function public.cip_verificar_parametros();
 
 create or replace function public.definir_faixa_parametro(p_tipo_cip public.tipo_cip_enum, p_campo text,
-  p_minimo numeric, p_maximo numeric, p_unidade text, p_ativo boolean)
+  p_minimo numeric, p_maximo numeric, p_unidade text, p_ativo boolean,
+  p_grupo_equipamento text default 'todos', p_fonte text default null)
 returns void language plpgsql security definer set search_path = '' as $function$
 declare
   v_uid uuid := auth.uid();
   v_nome text;
   v_unidade text := nullif(btrim(coalesce(p_unidade, '')), '');
+  v_fonte text := nullif(btrim(coalesce(p_fonte, '')), '');
+  v_grupo text := coalesce(nullif(btrim(coalesce(p_grupo_equipamento, '')), ''), 'todos');
 begin
   if v_uid is null or public.auth_role() is distinct from 'administrador' then
     raise exception 'Somente o supervisor/administrador pode definir faixas de parâmetros.' using errcode = '42501';
   end if;
   if p_campo is null or p_campo !~ '^[a-z0-9_]{1,80}$' then
     raise exception 'Parâmetro inválido.' using errcode = '22023';
+  end if;
+  if not (v_grupo = any (public.cip_grupos_equipamento())) then
+    raise exception 'Grupo de equipamentos inválido.' using errcode = '22023';
   end if;
   if p_minimo is null and p_maximo is null then
     raise exception 'Informe ao menos o limite mínimo ou o máximo.' using errcode = '22023';
@@ -339,14 +477,19 @@ begin
   if v_unidade is not null and char_length(v_unidade) > 20 then
     raise exception 'Unidade muito longa (até 20 caracteres).' using errcode = '22023';
   end if;
+  if v_fonte is not null and char_length(v_fonte) > 200 then
+    raise exception 'Documento de origem muito longo (até 200 caracteres).' using errcode = '22023';
+  end if;
   select p.nome into v_nome from public.perfis p where p.uid = v_uid;
-  insert into public.cip_parametros_faixas (tipo_cip, campo, minimo, maximo, unidade, ativo, atualizado_por_nome, atualizado_por_uid)
-  values (p_tipo_cip, p_campo, p_minimo, p_maximo, v_unidade, coalesce(p_ativo, true), coalesce(v_nome, 'Administrador'), v_uid)
-  on conflict (tipo_cip, campo) do update set minimo = excluded.minimo, maximo = excluded.maximo, unidade = excluded.unidade,
+  insert into public.cip_parametros_faixas (tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, ativo, atualizado_por_nome, atualizado_por_uid)
+  values (p_tipo_cip, p_campo, v_grupo, trim_scale(p_minimo), trim_scale(p_maximo), v_unidade, v_fonte, coalesce(p_ativo, true), coalesce(v_nome, 'Administrador'), v_uid)
+  on conflict (tipo_cip, campo, grupo_equipamento) do update set minimo = excluded.minimo, maximo = excluded.maximo,
+    unidade = excluded.unidade, fonte = coalesce(excluded.fonte, public.cip_parametros_faixas.fonte),
     ativo = excluded.ativo, atualizado_em = now(), atualizado_por_nome = excluded.atualizado_por_nome,
     atualizado_por_uid = excluded.atualizado_por_uid;
-  insert into public.cip_parametros_faixas_historico (tipo_cip, campo, minimo, maximo, unidade, ativo, por_nome, por_uid)
-  values (p_tipo_cip, p_campo, p_minimo, p_maximo, v_unidade, coalesce(p_ativo, true), coalesce(v_nome, 'Administrador'), v_uid);
+  insert into public.cip_parametros_faixas_historico (tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, ativo, por_nome, por_uid)
+  select tipo_cip, campo, grupo_equipamento, minimo, maximo, unidade, fonte, ativo, atualizado_por_nome, atualizado_por_uid
+  from public.cip_parametros_faixas where tipo_cip = p_tipo_cip and campo = p_campo and grupo_equipamento = v_grupo;
 end;
 $function$;
 
@@ -393,9 +536,10 @@ $function$;
 -- 4. Regra de data futura também para o CIP Alcalino
 -- ---------------------------------------------------------------------
 update public.cip_configuracao c
-   set tipos_data_futura = c.tipos_data_futura || array['alcalino']::public.tipo_cip_enum[],
+   set tipos_data_futura = (select array_agg(distinct t) from unnest(c.tipos_data_futura
+                              || array['alcalino','degas','aldox']::public.tipo_cip_enum[]) t),
        atualizado_em = now(), atualizado_por_nome = 'Migração CIP v10'
- where c.id = 1 and not (c.tipos_data_futura @> array['alcalino']::public.tipo_cip_enum[]);
+ where c.id = 1 and not (c.tipos_data_futura @> array['alcalino','degas','aldox']::public.tipo_cip_enum[]);
 
 -- ---------------------------------------------------------------------
 -- 5. vw_cip_registros: mesma definição da v8 + verificacao_parametros
@@ -438,7 +582,7 @@ returns table (ordem integer, tabela text, chave text[]) language sql immutable 
     (12, 'cip_adega_controles',           array['tipo_cip']),
     (13, 'cip_adega_controles_historico', array['id']),
     (14, 'cip_adega_datas_base',          array['id']),
-    (15, 'cip_parametros_faixas',         array['tipo_cip','campo']),
+    (15, 'cip_parametros_faixas',         array['tipo_cip','campo','grupo_equipamento']),
     (16, 'cip_parametros_faixas_historico', array['id'])
 $$;
 
@@ -602,7 +746,67 @@ $$;
 revoke all on all functions in schema cip_backup from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
--- 7. Segurança: RLS e privilégios dos objetos novos
+-- 7. CIP que passa de turno: quem iniciou e quem finalizou
+--    Um só envio (decisão do usuário em 16/11/2026): quem termina o CIP
+--    preenche o formulário como "Operador" (quem finalizou) e informa quem
+--    iniciou, gravado em dados->>'operador_inicio'. Sem coluna nova e sem
+--    mudar a assinatura de editar_registro_cip: a edição e o histórico de
+--    edições continuam iguais. Registros antigos não têm a chave.
+--    O gatilho padroniza o nome com as mesmas regras do campo Operador
+--    (v8.1): nome válido, grafia oficial do cadastro e, se o supervisor
+--    exigir operador cadastrado, só nomes ativos da lista.
+-- ---------------------------------------------------------------------
+create or replace function public.cip_registros_operador_inicio()
+returns trigger language plpgsql set search_path = '' as $$
+declare
+  v_nome text;
+  v_op public.cip_operadores;
+  v_exigir boolean;
+begin
+  if public.cip_em_restauracao() then
+    return new;
+  end if;
+  v_nome := nullif(btrim(coalesce(new.dados->>'operador_inicio', '')), '');
+  if tg_op = 'UPDATE' and v_nome is not distinct from nullif(btrim(coalesce(old.dados->>'operador_inicio', '')), '')
+     and new.nome_operador is not distinct from old.nome_operador then
+    return new;
+  end if;
+  if v_nome is null then
+    if new.dados ? 'operador_inicio' then
+      new.dados := new.dados - 'operador_inicio';
+    end if;
+    return new;
+  end if;
+  v_nome := public.cip_normalizar_nome(v_nome);
+  if not public.cip_nome_pessoa_valido(v_nome) then
+    raise exception 'Nome do operador que iniciou o CIP inválido: informe o nome (ao menos 2 letras, sem números ou símbolos).' using errcode = '23514';
+  end if;
+  select * into v_op from public.cip_operadores o
+   where o.nome_chave = public.cip_nome_chave(v_nome)
+   order by o.ativo desc limit 1;
+  select coalesce(c.exigir_operador_cadastrado, false) into v_exigir from public.cip_configuracao c where c.id = 1;
+  if coalesce(v_exigir, false) and (v_op.id is null or not v_op.ativo) then
+    raise exception 'Operador que iniciou o CIP não cadastrado ou inativo: selecione um nome da lista de operadores.' using errcode = '23514';
+  end if;
+  if v_op.id is not null then
+    v_nome := v_op.nome;
+  end if;
+  if public.cip_nome_chave(v_nome) = public.cip_nome_chave(new.nome_operador) then
+    raise exception 'Quem iniciou e quem finalizou o CIP são a mesma pessoa: desmarque "Este CIP passou de turno".' using errcode = '23514';
+  end if;
+  new.dados := jsonb_set(new.dados, '{operador_inicio}', to_jsonb(v_nome));
+  return new;
+end;
+$$;
+-- O nome do gatilho fica depois de trg_cip_registros_operador (ordem
+-- alfabética), então nome_operador já chega padronizado aqui.
+create trigger trg_cip_registros_operador_inicio
+  before insert or update of dados, nome_operador on public.cip_registros
+  for each row execute function public.cip_registros_operador_inicio();
+revoke all on function public.cip_registros_operador_inicio() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 8. Segurança: RLS e privilégios dos objetos novos
 -- ---------------------------------------------------------------------
 alter table public.cip_adega_controles enable row level security;
 alter table public.cip_adega_controles_historico enable row level security;
@@ -634,21 +838,23 @@ grant select on public.vw_cip_registros to authenticated;
 revoke all on function public.definir_periodicidade_adega(public.tipo_cip_enum, integer, text, integer) from public, anon;
 revoke all on function public.definir_data_base_adega_geral(public.tipo_cip_enum, date) from public, anon;
 revoke all on function public.remover_data_base_adega_geral(public.tipo_cip_enum) from public, anon;
-revoke all on function public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean) from public, anon;
+revoke all on function public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean, text, text) from public, anon;
 revoke all on function public.definir_limites_mapa_calor(integer, integer) from public, anon;
 grant execute on function public.definir_periodicidade_adega(public.tipo_cip_enum, integer, text, integer) to authenticated;
 grant execute on function public.definir_data_base_adega_geral(public.tipo_cip_enum, date) to authenticated;
 grant execute on function public.remover_data_base_adega_geral(public.tipo_cip_enum) to authenticated;
-grant execute on function public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean) to authenticated;
+grant execute on function public.definir_faixa_parametro(public.tipo_cip_enum, text, numeric, numeric, text, boolean, text, text) to authenticated;
 grant execute on function public.definir_limites_mapa_calor(integer, integer) to authenticated;
 
 revoke all on function public.cip_verificar_parametros() from public, anon, authenticated;
 revoke all on function public.cip_extrair_numero(text) from anon;
+revoke all on function public.cip_grupo_equipamento(text) from anon;
+revoke all on function public.cip_grupos_equipamento() from anon;
 revoke all on function public.cip_registro_conta_adega(public.tipo_cip_enum, text) from anon;
 
 comment on table public.cip_adega_controles is 'CIP v10: procedimentos da aba Adega no modo geral (periodicidade em dias/meses ou pendente).';
 comment on table public.cip_adega_datas_base is 'CIP v10: eventos de data-base da aba Adega no modo geral (só inclusão).';
-comment on table public.cip_parametros_faixas is 'CIP v10: faixas aceitáveis por tipo de CIP e parâmetro. Vazia até as faixas oficiais serem informadas.';
+comment on table public.cip_parametros_faixas is 'CIP v10: faixas aceitáveis por tipo de CIP, parâmetro e grupo de equipamentos. Carga inicial: tabelas Anexo 1 oficiais (16/11/2026).';
 comment on column public.cip_registros.verificacao_parametros is 'CIP v10: comparação com as faixas vigentes no momento do registro/edição. Os valores digitados ficam em dados, inalterados.';
 
 commit;

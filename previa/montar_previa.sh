@@ -10,6 +10,18 @@ SAIDA="${1:?informe a pasta de saída}"
 rm -rf "$SAIDA"; mkdir -p "$SAIDA/previa"
 cp -r "$REPO/docs/." "$SAIDA/"
 cp "$REPO/previa/banco_previa.js" "$REPO/previa/faixa_previa.js" "$SAIDA/previa/"
+# Faixas oficiais: extraídas da própria migração v10 (uma só fonte).
+python3 - "$REPO/supabase/migrations/20261113120100_cip_v10_adega_faixas_mapa.sql" "$SAIDA/previa/faixas_oficiais.js" <<'EOF'
+import json, re, sys
+sql = open(sys.argv[1], encoding="utf-8").read()
+bloco = sql[sql.index("insert into public.cip_parametros_faixas (tipo_cip, campo, grupo_equipamento"):]
+bloco = bloco[:bloco.index(") as v(tipo, campo, grupo")]
+linhas = re.findall(r"\('([a-z_0-9]+)','([a-z_0-9]+)','([a-z_]+)',([0-9.]+|null),([0-9.]+|null),'([^']*)','([^']*)'\)", bloco)
+num = lambda x: None if x == "null" else float(x)
+dados = [[t, c, g, num(mi), num(ma), u, f] for t, c, g, mi, ma, u, f in linhas]
+assert len(dados) == 59, len(dados)
+open(sys.argv[2], "w", encoding="utf-8").write("// Gerado de supabase/migrations/20261113120100_cip_v10_adega_faixas_mapa.sql\nwindow.CIP_FAIXAS_OFICIAIS = " + json.dumps(dados, ensure_ascii=False) + ";\n")
+EOF
 # Configuração falsa: a prévia não conhece o endereço nem a chave do Supabase real.
 cat > "$SAIDA/js/config.js" <<'EOF'
 // PRÉVIA: sem endereço nem chave do Supabase real (banco simulado no navegador).
@@ -22,7 +34,7 @@ saida = sys.argv[1]
 for f in glob.glob(os.path.join(saida, "*.html")):
     s = open(f, encoding="utf-8").read()
     s, n = re.subn(r'<script src="https://cdn\.jsdelivr\.net/npm/@supabase/supabase-js@[^"]+"></script>',
-                   '<script src="previa/banco_previa.js"></script>\n  <script src="previa/faixa_previa.js"></script>', s)
+                   '<script src="previa/faixas_oficiais.js"></script>\n  <script src="previa/banco_previa.js"></script>\n  <script src="previa/faixa_previa.js"></script>', s)
     assert n == 1, f
     s = s.replace("<title>", "<title>[Prévia] ", 1)
     open(f, "w", encoding="utf-8").write(s)

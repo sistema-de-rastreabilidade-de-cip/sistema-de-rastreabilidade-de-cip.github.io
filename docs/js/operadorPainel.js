@@ -51,6 +51,8 @@ function opFmtData(dataIso) {
 
 const OP_CORES_TIPO = {
   alcalino: "#4f6d1f",
+  degas: "#6b4f8a",
+  aldox: "#8a4f5e",
   alcalino_clorado: "#1f4d3a",
   completo: "#3c7a5c",
   tanque_levedura: "#8a5a12",

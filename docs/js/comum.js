@@ -66,6 +66,8 @@ function cipMensagemErro(error, prefixo) {
 // ---- Tipos de CIP ----
 const CIP_CORES_TIPO = {
   alcalino: "#4f6d1f",
+  degas: "#6b4f8a",
+  aldox: "#8a4f5e",
   alcalino_clorado: "#1f4d3a",
   completo: "#3c7a5c",
   tanque_levedura: "#8a5a12",
@@ -103,7 +105,7 @@ function cipSelos(r) { return `<span class="selos-avaliacao">${cipSeloAvaliacao(
 // Situação: pendente de validação operacional. Enquanto não houver outra
 // decisão, a data do CIP não pode ser posterior a hoje (fuso da fábrica)
 // em todos os tipos. O banco aplica a mesma regra (cip_data_futura_bloqueada).
-let CIP_CONFIG = { dias_aviso_adega: 30, bloquear_data_futura: true, tipos_data_futura: ["alcalino_clorado", "completo", "tanque_levedura", "linha_recuperacao_levedura", "osam", "filtracao_filtro3", "filtracao_bmf", "alcalino"] };
+let CIP_CONFIG = { dias_aviso_adega: 30, bloquear_data_futura: true, tipos_data_futura: ["alcalino_clorado", "completo", "tanque_levedura", "linha_recuperacao_levedura", "osam", "filtracao_filtro3", "filtracao_bmf", "alcalino", "degas", "aldox"] };
 async function cipCarregarConfiguracao() {
   const { data, error } = await supabaseClient.from("cip_configuracao").select("*").eq("id", 1).maybeSingle();
   if (!error && data) CIP_CONFIG = data;
@@ -126,8 +128,9 @@ function cipConfigurarNavegacao(perfil) {
 
 // =====================================================================
 // ADEGA (v10) — modo geral, sem separar Adega A, B e D:
-//   CIP Alcalino a cada 30 dias, CIP Alcalino Clorado a cada 6 meses e
-//   CIP OSAN (BBT 01–12) com periodicidade pendente de definição.
+//   CIP Alcalino a cada 30 dias, CIP Alcalino Clorado a cada 6 meses,
+//   CIP OSAN (BBT 01–12) com periodicidade pendente de definição e
+//   CIP Degás e CIP Aldox semanais (tabelas PO-JAC-FAB-030 e 029).
 // Periodicidades em cip_adega_controles (configuráveis pelo supervisor).
 // A situação é sempre recalculada a partir dos registros; sem registro,
 // vale a data-base definida pelo administrador; sem nenhum dos dois, a
@@ -135,14 +138,14 @@ function cipConfigurarNavegacao(perfil) {
 // (nada é inventado).
 // =====================================================================
 const CIP_NOMES_ADEGAS = ["Adega A", "Adega B", "Adega D"];
-const CIP_TIPOS_ADEGA = ["alcalino", "alcalino_clorado", "osam"];
+const CIP_TIPOS_ADEGA = ["alcalino", "alcalino_clorado", "osam", "degas", "aldox"];
 const CIP_ROTULO_STATUS = { vencido: "Vencido", hoje: "Vence hoje", proximo: "Próximo do vencimento", realizado: "Realizado", emdia: "Em dia", semhistorico: "Sem histórico", pendente: "Periodicidade pendente" };
 const CIP_ICONE_ALERTA = '<svg class="icone-alerta" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 2.5 42h43z" fill="currentColor"/><path d="M24 17v13" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="24" cy="36" r="2.8" fill="#fff"/></svg>';
 
 // Mesma regra do banco (cip_registro_conta_adega): o Alcalino Clorado
 // também é usado nos tanques de fermentação, que não entram na Adega.
 function cipRegistroContaAdega(r) {
-  if (r.tipo_cip === "alcalino" || r.tipo_cip === "osam") return true;
+  if (["alcalino", "osam", "degas", "aldox"].includes(r.tipo_cip)) return true;
   if (r.tipo_cip === "alcalino_clorado") return CIP_NOMES_ADEGAS.includes(r.equipamento);
   return false;
 }
@@ -395,7 +398,8 @@ function cipDiferencasEdicao(e, tipoCip) {
   comparar("Observações do operador", "observacoes_operador", antes.observacoes_operador, depois.observacoes_operador);
   const dadosA = antes.dados || {};
   const dadosD = depois.dados || {};
-  const conhecidas = new Set();
+  const conhecidas = new Set(["operador_inicio"]);
+  comparar("Operador que iniciou (troca de turno)", "operador_inicio", dadosA.operador_inicio, dadosD.operador_inicio);
   config.campos.forEach((c) => { conhecidas.add(c.key); comparar(c.label, c.key, dadosA[c.key], dadosD[c.key]); });
   new Set([...Object.keys(dadosA), ...Object.keys(dadosD)]).forEach((k) => { if (!conhecidas.has(k)) comparar(k, k, dadosA[k], dadosD[k]); });
   return diffs;
@@ -468,7 +472,50 @@ const CIP_ROTULO_VERIFICACAO = {
   dentro: "Dentro da faixa", abaixo: "Abaixo do mínimo", acima: "Acima do máximo",
   sem_valor: "Não preenchido", nao_numerico: "Sem número para comparar",
 };
+// Grupos de equipamentos das faixas — mesma regra do banco
+// (cip_grupo_equipamento). Uma faixa de grupo tem prioridade sobre "todos".
+const CIP_ROTULO_GRUPO = {
+  todos: "Todos os equipamentos",
+  tanques_fermentacao: "Tanques de fermentação (Horaps e Veraps)",
+  trasfega: "Linha de Trasfega (CIP 7)",
+  adega: "Adega A, B e D",
+  bmf_membranas: "Membranas do BMF",
+  bmf_tanques_linhas: "UBT, UBL, FBT e FBL",
+  bmf_aditivos: "Tanques de aditivos (Sílica, PVPP, Alginato, Antioxidante, Lúpulo)",
+  bmf_linhas_maturada: "Linhas de maturada, envio BMF e envio adegas",
+  bmf_blendagem: "Linha de blendagem",
+  outros: "Outros",
+};
+const CIP_GRUPOS_POR_TIPO = {
+  completo: ["tanques_fermentacao", "trasfega", "adega", "todos"],
+  alcalino_clorado: ["tanques_fermentacao", "trasfega", "adega", "todos"],
+  filtracao_bmf: ["bmf_membranas", "bmf_tanques_linhas", "bmf_aditivos", "bmf_linhas_maturada", "bmf_blendagem", "todos"],
+};
+function cipGruposDoTipo(tipo) { return CIP_GRUPOS_POR_TIPO[tipo] || ["todos"]; }
+function cipGrupoEquipamento(equip) {
+  const e = String(equip || "");
+  if (e.startsWith("Tanque de Fermentação ")) return "tanques_fermentacao";
+  if (e === "Linha de Trasfega") return "trasfega";
+  if (["Adega A", "Adega B", "Adega D"].includes(e)) return "adega";
+  if (e === "Filtro de Cerveja de Membrana — BMF") return "bmf_membranas";
+  if (["Tanque de Cerveja Maturada — UBT", "Tanque de Cerveja Filtrada — FBT", "Linha de Cerveja não filtrada — UBL", "Linha de Cerveja não filtrada — FBL"].includes(e)) return "bmf_tanques_linhas";
+  if (["Tanque de Sílica — BSÍLICA", "Tanque de PVPP — BPVPP", "Tanque de Alginato — BALGINATO", "Tanque de Antioxidante — BTA", "Tanque de Lúpulo — BLÚPULO"].includes(e)) return "bmf_aditivos";
+  if (["Linha de Filtração — BFILTRAÇÃO", "Linha até Adega — BADEGA"].includes(e)) return "bmf_linhas_maturada";
+  if (e === "Linha de Blendagem — BBLENDAGEM") return "bmf_blendagem";
+  return "outros";
+}
+
+// v10 — CIP que passou de turno: quem iniciou fica em dados.operador_inicio;
+// nome_operador é quem finalizou.
+function cipOperadorInicio(r) {
+  return (r && r.dados && r.dados.operador_inicio) || "";
+}
+function cipTextoOperadores(r) {
+  const inicio = cipOperadorInicio(r);
+  return inicio ? `${r.nome_operador} (iniciado por ${inicio})` : r.nome_operador;
+}
 function cipRotuloCampo(tipo, chave) {
+  if (chave === "operador_inicio") return "Operador que iniciou";
   const cfg = typeof FORM_CONFIG !== "undefined" && FORM_CONFIG[tipo];
   const campo = cfg && (cfg.campos || []).find((c) => c.key === chave);
   return campo ? campo.label : chave;
@@ -482,7 +529,7 @@ function cipTabelaVerificacao(tipo, v) {
   const linhas = v.itens.map((i) => {
     const fora = i.situacao === "abaixo" || i.situacao === "acima";
     return `<tr class="verif-${i.situacao}${fora ? " verif-fora" : ""}">
-      <td data-rotulo="Parâmetro">${cipEsc(cipRotuloCampo(tipo, i.campo))}</td>
+      <td data-rotulo="Parâmetro">${cipEsc(cipRotuloCampo(tipo, i.campo))}${i.fonte ? `<div class="origem-faixa">${cipEsc(i.fonte)}${i.grupo_equipamento && i.grupo_equipamento !== "todos" ? ` · ${cipEsc(CIP_ROTULO_GRUPO[i.grupo_equipamento] || i.grupo_equipamento)}` : ""}</div>` : ""}</td>
       <td data-rotulo="Valor registrado" class="verif-valor">${cipEsc(i.valor ?? "—")}</td>
       <td data-rotulo="Mínimo">${cipFmtNumero(i.minimo)}${i.minimo !== null && i.unidade ? " " + cipEsc(i.unidade) : ""}</td>
       <td data-rotulo="Máximo">${cipFmtNumero(i.maximo)}${i.maximo !== null && i.unidade ? " " + cipEsc(i.unidade) : ""}</td>
@@ -496,7 +543,7 @@ function cipTabelaVerificacao(tipo, v) {
       <thead><tr><th>Parâmetro</th><th>Valor registrado</th><th>Mínimo</th><th>Máximo</th><th>Situação</th></tr></thead>
       <tbody>${linhas}</tbody>
     </table></div>
-    <p class="nota-verif">Comparação feita em ${cipFmtDataHora(v.verificado_em)}, com as faixas vigentes nesse momento. O valor registrado é mostrado exatamente como foi digitado; para comparar, o sistema usa o primeiro número do texto (vírgula ou ponto como decimal).</p>`;
+    <p class="nota-verif">Comparação feita em ${cipFmtDataHora(v.verificado_em)}, com as faixas vigentes nesse momento. O valor registrado é mostrado exatamente como foi digitado; para comparar, o sistema usa o primeiro número do texto (vírgula ou ponto como decimal; "6.500" é lido como 6500).</p>`;
 }
 function cipResumoVerificacaoTexto(tipo, v) {
   if (!v || !Array.isArray(v.itens) || !v.itens.length) return "Sem faixa cadastrada";

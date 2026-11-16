@@ -127,7 +127,14 @@ async function preencherTudo(p, valores) {
   await p.selectOption("#campo_bmf_soaking", "NÃO");
   await p.fill("#observacoes", "Observação do verso — BMF");
   await p.screenshot({ path: path.join(SHOTS, "bmf-formulario-1366.png"), fullPage: true });
-  await p.click("#btn-salvar"); await p.waitForURL("**/painel.html");
+  await p.click("#btn-salvar");
+  // v10: com as faixas oficiais (Anexo I do BMF), 9% de soda e 12000 ppm aparecem
+  // fora da faixa para o operador — o registro é gravado mesmo assim.
+  await Promise.race([p.waitForURL("**/painel.html"), p.waitForSelector(".resultado-parametros")]);
+  if (await p.$(".resultado-parametros")) {
+    v((await p.textContent(".tabela-verificacao")).includes("Acima do máximo"), "BMF: soda 9% e Divos 12000 ppm sinalizados fora da faixa oficial, sem bloquear");
+    await p.click("#btn-continuar-registro"); await p.waitForURL("**/painel.html");
+  }
   const bmf = await sql("select to_jsonb(r) from cip_registros r where tipo_cip='filtracao_bmf';");
   v(bmf && Object.keys(bmf.dados).length === 24 && Object.keys(bmf.dados).every((k) => k.startsWith("bmf_") && bmf.dados[k]), "BMF: os 24 campos gravados, todos preenchidos, só chaves bmf_");
   v(bmf.dados.bmf_conc_inicial_soda === "9%" && bmf.dados.bmf_soaking === "NÃO", "BMF: valor fora da faixa de referência é aceito (sem bloqueio) e Soaking gravado");

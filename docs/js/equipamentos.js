@@ -75,6 +75,10 @@ function listaEquipamentosParaCampo(tipoSeletor) {
       return [...TANQUES_FERMENTACAO, OUTROS_EQUIPAMENTOS.find((e) => e.codigo === "LT"), ...OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega")];
     case "adega": // v10: CIP Alcalino
       return OUTROS_EQUIPAMENTOS.filter((e) => e.categoria === "adega");
+    case "degas": // v10: CIP Degás (mesmo nome do equipamento na lista da Blendagem)
+      return EQUIP_FILTRACAO_BMF.filter((e) => e.codigo === "DEGAS");
+    case "aldox": // v10: CIP Aldox
+      return EQUIP_FILTRACAO_BMF.filter((e) => e.codigo === "Aldox");
     case "tq_levedura":
       return TANQUES_LEVEDURA;
     case "tfm":

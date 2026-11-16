@@ -146,6 +146,7 @@ async function gCriarBackup() {
   const selTipo = document.getElementById("faixa-tipo");
   selTipo.innerHTML = Object.keys(FORM_CONFIG).map((t) => `<option value="${t}">${cipEsc(cipRotuloTipo(t))}</option>`).join("");
   selTipo.addEventListener("change", gRenderizarFaixas);
+  document.getElementById("faixa-grupo").addEventListener("change", gRenderizarFaixas);
   gCarregarFaixas();
 }
 async function gVerificarBackup(id, btn) {
@@ -193,23 +194,33 @@ async function gCarregarFaixas() {
 }
 function gRenderizarFaixas() {
   const tipo = document.getElementById("faixa-tipo").value;
+  const selGrupo = document.getElementById("faixa-grupo");
+  const grupos = cipGruposDoTipo(tipo);
+  if (selGrupo.dataset.tipo !== tipo) {
+    selGrupo.innerHTML = grupos.map((g) => `<option value="${g}">${cipEsc(CIP_ROTULO_GRUPO[g] || g)}</option>`).join("");
+    selGrupo.dataset.tipo = tipo;
+  }
+  document.getElementById("campo-faixa-grupo").classList.toggle("oculto", grupos.length === 1);
+  const grupo = selGrupo.value || "todos";
   const campos = (FORM_CONFIG[tipo] && FORM_CONFIG[tipo].campos || []).filter((c) => c.tipo !== "hora" && c.tipo !== "opcoes");
-  const ativas = G_FAIXAS.filter((f) => f.tipo_cip === tipo && f.ativo).length;
-  document.getElementById("faixa-resumo").textContent = ativas
-    ? `${ativas} parâmetro(s) com comparação ativa neste tipo.`
+  const ativasTipo = G_FAIXAS.filter((f) => f.tipo_cip === tipo && f.ativo);
+  const ativasGrupo = ativasTipo.filter((f) => f.grupo_equipamento === grupo).length;
+  document.getElementById("faixa-resumo").textContent = ativasTipo.length
+    ? `${ativasTipo.length} faixa(s) ativa(s) neste tipo de CIP; ${ativasGrupo} neste grupo de equipamentos.`
     : "Nenhuma faixa cadastrada neste tipo: comparação desligada.";
   document.getElementById("corpo-faixas").innerHTML = campos.map((c) => {
-    const f = G_FAIXAS.find((x) => x.tipo_cip === tipo && x.campo === c.key);
+    const f = G_FAIXAS.find((x) => x.tipo_cip === tipo && x.campo === c.key && x.grupo_equipamento === grupo);
     const v = (n) => (n === null || n === undefined ? "" : String(n).replace(".", ","));
-    return `<tr data-campo="${c.key}">
+    return `<tr data-campo="${c.key}" class="${f && f.ativo ? "faixa-ativa" : ""}">
       <td data-rotulo="Parâmetro">${cipEsc(c.label)}${f ? `<div class="sem-dado nota-pequena">Por ${cipEsc(f.atualizado_por_nome)}, ${cipFmtDataHora(f.atualizado_em)}</div>` : ""}</td>
       <td data-rotulo="Mínimo"><input type="text" inputmode="decimal" class="faixa-min" value="${v(f && f.minimo)}" placeholder="—" aria-label="Mínimo de ${cipEsc(c.label)}" /></td>
       <td data-rotulo="Máximo"><input type="text" inputmode="decimal" class="faixa-max" value="${v(f && f.maximo)}" placeholder="—" aria-label="Máximo de ${cipEsc(c.label)}" /></td>
       <td data-rotulo="Unidade"><input type="text" class="faixa-un" maxlength="20" value="${cipEsc((f && f.unidade) || "")}" placeholder="ex.: %" aria-label="Unidade de ${cipEsc(c.label)}" /></td>
+      <td data-rotulo="Documento de origem"><input type="text" class="faixa-fonte" maxlength="200" value="${cipEsc((f && f.fonte) || "")}" placeholder="ex.: PO-JAC-FAB-…, Anexo 1" aria-label="Documento de origem de ${cipEsc(c.label)}" /></td>
       <td data-rotulo="Comparar"><input type="checkbox" class="faixa-ativo" ${!f || f.ativo ? "checked" : ""} aria-label="Comparar ${cipEsc(c.label)}" /></td>
       <td><button type="button" class="secundario btn-salvar-faixa">Salvar</button></td>
     </tr>`;
-  }).join("") || '<tr><td colspan="6" class="sem-dado">Este formulário não tem parâmetros numéricos.</td></tr>';
+  }).join("") || '<tr><td colspan="7" class="sem-dado">Este formulário não tem parâmetros numéricos.</td></tr>';
   document.querySelectorAll(".btn-salvar-faixa").forEach((b) => b.addEventListener("click", () => gSalvarFaixa(b)));
 }
 async function gSalvarFaixa(botao) {
@@ -225,10 +236,12 @@ async function gSalvarFaixa(botao) {
   const { error } = await supabaseClient.rpc("definir_faixa_parametro", {
     p_tipo_cip: tipo, p_campo: tr.dataset.campo, p_minimo: min, p_maximo: max,
     p_unidade: tr.querySelector(".faixa-un").value.trim() || null, p_ativo: tr.querySelector(".faixa-ativo").checked,
+    p_grupo_equipamento: document.getElementById("faixa-grupo").value || "todos",
+    p_fonte: tr.querySelector(".faixa-fonte").value.trim() || null,
   });
   botao.disabled = false;
   if (error) return gErro("erro-faixa", cipMensagemErro(error, "Não foi possível salvar a faixa"));
-  gMensagem("sucesso", "Faixa salva. Ela vale para os próximos registros e edições deste tipo de CIP.");
+  gMensagem("sucesso", "Faixa salva. Ela vale para os próximos registros e edições deste tipo de CIP e grupo de equipamentos.");
   gCarregarFaixas();
 }
 
@@ -256,6 +269,7 @@ async function iniciarGestao() {
   const selTipo = document.getElementById("faixa-tipo");
   selTipo.innerHTML = Object.keys(FORM_CONFIG).map((t) => `<option value="${t}">${cipEsc(cipRotuloTipo(t))}</option>`).join("");
   selTipo.addEventListener("change", gRenderizarFaixas);
+  document.getElementById("faixa-grupo").addEventListener("change", gRenderizarFaixas);
   gCarregarFaixas();
 }
 

@@ -1,8 +1,9 @@
 -- =====================================================================
--- CIP v10 (1/2) — novo tipo de CIP: "CIP Alcalino" (aba Adega, a cada 30 dias)
+-- CIP v10 (1/2) — novos tipos de CIP: "CIP Alcalino" (aba Adega, a cada 30
+-- dias), "CIP Degás" e "CIP Aldox" (aba Adega, semanais)
 -- ---------------------------------------------------------------------
--- Escopo: EXCLUSIVO do Sistema de Rastreabilidade de CIP. Só acrescenta um
--- valor ao tipo public.tipo_cip_enum. Nenhum dado é alterado e nenhum
+-- Escopo: EXCLUSIVO do Sistema de Rastreabilidade de CIP. Só acrescenta três
+-- valores ao tipo public.tipo_cip_enum. Nenhum dado é alterado e nenhum
 -- objeto do FTR (painel_*) é referenciado.
 --
 -- O PostgreSQL não permite usar um valor novo de enum na mesma transação
@@ -25,5 +26,8 @@ end
 $guarda$;
 
 alter type public.tipo_cip_enum add value if not exists 'alcalino';
+-- CIPs de Degás (PO-JAC-FAB-030) e Aldox (PO-JAC-FAB-029), aba Adega
+alter type public.tipo_cip_enum add value if not exists 'degas';
+alter type public.tipo_cip_enum add value if not exists 'aldox';
 
 commit;

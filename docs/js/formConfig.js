@@ -163,6 +163,44 @@ FORM_CONFIG.alcalino = {
 };
 
 // =====================================================================
+// v10 — CIP Degás (PO-JAC-FAB-030) e CIP Aldox (PO-JAC-FAB-029), aba Adega.
+// As tabelas "Anexo 1" trazem os parâmetros, mas não o formulário de
+// registro; por decisão do usuário (16/11/2026) os campos são as colunas da
+// própria tabela: soda cáustica (concentração, tempo, temperatura no
+// retorno, utilizações), esterilização após atingir 80 ºC no retorno, pH
+// para isenção. A coluna "Sanitizante" está vazia nas duas tabelas.
+// =====================================================================
+function camposDegasAldox() {
+  return [
+    { key: "num_utilizacao_soda", label: "Nº de utilização da solução de soda", tipo: "texto", secao: "Soda cáustica" },
+    { key: "conc_inicial_soda", label: "Concentração inicial de soda (%)", tipo: "texto", secao: "Soda cáustica" },
+    { key: "conc_final_soda", label: "Concentração final de soda (%)", tipo: "texto", secao: "Soda cáustica" },
+    { key: "tempo_circulacao_soda", label: "Tempo de circulação da soda (min)", tipo: "texto", secao: "Soda cáustica" },
+    { key: "temperatura_retorno", label: "Temperatura no retorno (°C)", tipo: "texto", secao: "Soda cáustica" },
+    { key: "esterilizacao_temperatura", label: "Esterilização: temperatura no retorno (°C)", tipo: "texto", secao: "Esterilização" },
+    { key: "esterilizacao_tempo", label: "Esterilização: tempo após atingir 80 ºC (min)", tipo: "texto", secao: "Esterilização" },
+    { key: "ph_isencao", label: "pH para isenção", tipo: "texto", secao: "Verificação final" },
+    { key: "coordenador_lider", label: "Coordenador/Líder", tipo: "texto", secao: "Verificação final" },
+  ];
+}
+FORM_CONFIG.degas = {
+  titulo: "CIP Degás — Adega",
+  documentoOrigem: "PO-JAC-FAB-030, Anexo 1 — Tabela CIP Degás (rev. 0, 04/08/2017); campos montados a partir da tabela",
+  equipamento: { label: "Equipamento", tipoSeletor: "degas" },
+  temHoraFinal: true,
+  somenteAdega: true,
+  campos: camposDegasAldox(),
+};
+FORM_CONFIG.aldox = {
+  titulo: "CIP Aldox — Adega",
+  documentoOrigem: "PO-JAC-FAB-029, Anexo 1 — Tabela CIP Aldox (rev. 0, 04/08/2017); campos montados a partir da tabela",
+  equipamento: { label: "Equipamento", tipoSeletor: "aldox" },
+  temHoraFinal: true,
+  somenteAdega: true,
+  campos: camposDegasAldox(),
+};
+
+// =====================================================================
 // v9 — CIP de Filtração (dois procedimentos, campos SEPARADOS)
 // Fonte dos campos: lista da solicitação de 09/11/2026, que transcreve
 //   PO-JAC-FAB-005 rev. 2 (18/05/2018) — Anexo 2, CIP Filtração Filtro 3
@@ -240,6 +278,8 @@ const TIPO_CIP_LABELS = {
   alcalino_clorado: "CIP Alcalino Clorado",
   completo: "CIP TFM/HORAP/Trasfega/DAW",
   alcalino: "CIP Alcalino",
+  degas: "CIP Degás",
+  aldox: "CIP Aldox",
   tanque_levedura: "CIP Tanque de Levedura",
   linha_recuperacao_levedura: "CIP Linha de Recuperação de Levedura",
   osam: "CIP OSAN",

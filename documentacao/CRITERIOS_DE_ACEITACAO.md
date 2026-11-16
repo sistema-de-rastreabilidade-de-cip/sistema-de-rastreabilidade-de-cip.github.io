@@ -22,7 +22,7 @@ local, dados fictícios, `bash testes/rodar_tudo.sh`): **14 suítes, 670 verific
 
 ## v10 — em desenvolvimento (13/11/2026), não publicada
 
-Execução completa em 13/11/2026, na branch `feature/cip-v10` (`bash testes/rodar_tudo.sh`): **17 conjuntos, 928 verificações, nenhuma falha**. Mais 11 verificações da prévia navegável.
+Execução completa em 16/11/2026, na branch `feature/cip-v10` (`bash testes/rodar_tudo.sh`): **17 conjuntos, 986 verificações, nenhuma falha**. Mais 14 verificações da prévia navegável.
 
 | Suíte | Resultado |
 |-------|-----------|
